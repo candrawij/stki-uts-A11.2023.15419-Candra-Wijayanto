@@ -1,12 +1,30 @@
-def load_map_from_csv(filepath):
+import pandas as pd
+import os
+import csv
+from datetime import datetime
+import joblib
+from vsm_structures import Node, SlinkedList
+
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+
+def load_map_from_csv(filename):
     """
     Memuat file CSV (kolom A: key, kolom B: value) ke dalam dictionary.
     Fungsi ini mengabaikan baris yang diawali '#' (untuk komentar)
     dan mengabaikan kolom ekstra (seperti kolom 'kategori').
     """
+
+    # Tentukan path file absolut
+    filepath = os.path.join(BASE_DIR, 'Kamus', filename)
+
     try:
+        # Cek apakah file ada
+        if not os.path.exists(filepath):
+             print(f"!!! GAGAL: File Kamus tidak ditemukan di: {filepath}")
+             return {}
+
         # 'comment=#' memberi tahu pandas untuk mengabaikan baris yang diawali #
-        df = pd.read_csv(filepath, comment='#')
+        df = pd.read_csv(filepath, comment='#', dtype=str).fillna('')
         
         # Ambil nama kolom pertama (A) dan kedua (B)
         key_col = df.columns[0]
@@ -28,50 +46,48 @@ def load_map_from_csv(filepath):
         print(f"!!! ERROR saat memuat {filepath}: {e}")
         return {}
     
-    # --- 3. APLIKASI PREPROCESSING & HITUNG DF & IDF (INDEXING PHASE 1) ---
-# Pastikan dataset sudah dimuat di df_corpus
-df_corpus['Teks_Mentah'] = df_corpus['Teks_Mentah'].fillna('')
-df_corpus['Clean_Tokens'] = df_corpus['Teks_Mentah'].apply(full_preprocessing)
-
-N = len(df_corpus)
-df_counts = {} # Document Frequency
-
-for tokens in df_corpus['Clean_Tokens']:
-    for word in set(tokens): 
-        df_counts[word] = df_counts.get(word, 0) + 1
-
-idf_scores = {}
-for term, count in df_counts.items():
-    idf_scores[term] = math.log10(N / count)
-
-# --- 4. BUILDING THE INVERTED INDEX WITH TF-IDF (INDEXING PHASE 2) ---
-linked_list_data = {}
-unique_words_all = set(df_counts.keys())
-
-for word in unique_words_all:
-    linked_list_data[word] = SlinkedList()
-    linked_list_data[word].head = Node(docId=0, freq=None) 
-
-for index, row in df_corpus.iterrows():
-    doc_id = row['Doc_ID']
-    tokens = row['Clean_Tokens']
+def load_assets():
+    """Memuat aset VSM dari folder assets/ menggunakan path absolut."""
+    assets_dir = os.path.join(BASE_DIR, 'assets')
     
-    tf_in_doc = {}
-    for word in tokens:
-        tf_in_doc[word] = tf_in_doc.get(word, 0) + 1
-
-    for term, tf in tf_in_doc.items():
-        tfidf = tf * idf_scores[term]
+    try:
+        # Memuat tiga aset utama
+        IDF_SCORES = joblib.load(os.path.join(assets_dir, 'idf_scores.pkl'))
+        LINKED_LIST_DATA = joblib.load(os.path.join(assets_dir, 'linked_list_data.pkl'))
+        DF_METADATA = joblib.load(os.path.join(assets_dir, 'df_metadata.pkl'))
         
-        linked_list = linked_list_data[term].head
-        while linked_list.nextval is not None:
-            linked_list = linked_list.nextval
-        
-        linked_list.nextval = Node(docId=doc_id, freq=tfidf)
+        print("✅ Aset VSM berhasil dimuat.")
+        return IDF_SCORES, LINKED_LIST_DATA, DF_METADATA
+    
+    except FileNotFoundError:
+        print(f"❌ ERROR: File aset .pkl tidak ditemukan di '{assets_dir}'.")
+        print("   Pastikan Anda sudah menjalankan skrip indexing dan menyimpan file .pkl di folder 'assets'.")
+        return None, None, None
+    except Exception as e:
+        print(f"❌ ERROR saat memuat aset VSM: {e}")
+        return None, None, None
+    
+FOLDER_LOG_RIWAYAT = os.path.join(BASE_DIR, 'Riwayat')
+FILE_LOG_RIWAYAT = os.path.join(FOLDER_LOG_RIWAYAT, 'riwayat_pencarian.csv')
 
-# Mapping Doc ID to Name and Rating for final result
-df_metadata = df_corpus[['Doc_ID', 'Nama_Tempat', 'Lokasi', 'Rating']].copy()
-avg_rating_per_place = df_metadata.groupby('Nama_Tempat')['Rating'].mean().reset_index()
-avg_rating_per_place.rename(columns={'Rating': 'Avg_Rating'}, inplace=True)
-df_metadata = df_metadata.merge(avg_rating_per_place, on='Nama_Tempat', how='left')
-df_metadata.set_index('Doc_ID', inplace=True)
+def log_pencarian(query, tokens, intent, region):
+    """Menyimpan detail pencarian ke file CSV di dalam folder 'Riwayat'."""
+    
+    try:
+        # Membuat folder 'Riwayat' jika belum ada
+        os.makedirs(FOLDER_LOG_RIWAYAT, exist_ok=True)
+        
+        timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        tokens_str = ' '.join(tokens)
+        data_row = [timestamp, query, tokens_str, str(intent), str(region)]
+        
+        file_exists = os.path.isfile(FILE_LOG_RIWAYAT)
+        
+        with open(FILE_LOG_RIWAYAT, mode='a', newline='', encoding='utf-8') as f:
+            writer = csv.writer(f)
+            if not file_exists:
+                writer.writerow(['timestamp', 'query_mentah', 'vsm_tokens_final', 'intent_terdeteksi', 'region_terdeteksi'])
+            writer.writerow(data_row)
+            
+    except Exception as e:
+        print(f"\n!!! PERINGATAN: Gagal menyimpan riwayat pencarian: {e}")
