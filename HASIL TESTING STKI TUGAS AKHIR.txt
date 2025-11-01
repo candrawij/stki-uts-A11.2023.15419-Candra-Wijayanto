@@ -53,6 +53,10 @@ HASIL TESTING STKI TUGAS AKHIR
 # Front-End masih terlalu simple
 # kode sudah menggunakan Flask, jadi pakai git saja
 
+2.0.1
+- peralihan deploy railway ke streamlit
+- 
+
 
 RENCANA
 - pembuatan website
