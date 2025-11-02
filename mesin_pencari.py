@@ -78,7 +78,7 @@ def search_by_keyword(query_tokens, special_intent, region_filter):
             photo_url = row.get('Photo_URL') 
             if not photo_url or pd.isna(photo_url):
                 photo_url = f"https://placehold.co/400x200/556B2F/FFFFFF?text={urllib.parse.quote(str(row['Nama_Tempat']))}&font=poppins"
-            
+
             gmaps_link = row.get('Gmaps_Link')
             if not gmaps_link or pd.isna(gmaps_link):
                 gmaps_link = f"https://www.google.com/maps/search/?api=1&query={urllib.parse.quote(str(row['Nama_Tempat']) + ' ' + str(row['Lokasi']))}"
@@ -143,7 +143,7 @@ def search_by_keyword(query_tokens, special_intent, region_filter):
             photo_url = meta.get('Photo_URL') 
             if not photo_url or pd.isna(photo_url):
                 photo_url = f"https://placehold.co/400x200/556B2F/FFFFFF?text={urllib.parse.quote(str(name))}&font=poppins"
-            
+
             gmaps_link = meta.get('Gmaps_Link')
             if not gmaps_link or pd.isna(gmaps_link):
                 gmaps_link = f"https://www.google.com/maps/search/?api=1&query={urllib.parse.quote(str(name) + ' ' + str(meta['Lokasi']))}"

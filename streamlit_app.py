@@ -253,38 +253,18 @@ if st.session_state.search_performed:
                         st.write("")
                         
                         # Tombol ini sekarang hanya mengatur state
-                        if st.button("Lihat Detail", key=f"detail_{index}", use_container_width=True):
-                            st.session_state.modal_data = item.to_dict()
-                            st.rerun() # Paksa rerun untuk membuka modal
-                
+                        with st.expander("Lihat Detail", expanded=False):
+                            # Ambil data 'item' langsung, tak perlu state
+
+                            st.subheader("Estimasi Harga")
+                            st.info(f"**{item['price']}**")
+
+                            st.subheader("Fasilitas")
+                            facilities_list = [f.strip() for f in str(item['facilities']).split(',')]
+                            st.write(" ".join(f"`{fac}`" for fac in facilities_list))
+
+                            st.write("")
+                            st.link_button("Buka di Google Maps ↗", item['gmaps_link'], use_container_width=True)
+
                 if (index + 1) % 3 == 0:
                     st.write("") 
-
-# --- 3. LOGIKA UNTUK MENAMPILKAN MODAL (DI LUAR LOOP) ---
-# (Ini akan berjalan di *setiap* rerun)
-if st.session_state.modal_data:
-    item = st.session_state.modal_data # Ambil data yang disimpan
-    
-    # Buat modal
-    modal = st.modal(f"Detail untuk {item['name']}")
-    with modal:
-
-        photo_url = item['photo_url']
-        if not isinstance(photo_url, str) or pd.isna(photo_url):
-            photo_url = f"https://placehold.co/400x200/556B2F/FFFFFF?text={urllib.parse.quote(item['name'])}&font=poppins"
-        st.image(photo_url) 
-        
-        st.subheader("Estimasi Harga")
-        st.info(f"**{item['price']}**")
-
-        st.subheader("Fasilitas")
-        facilities_list = [f.strip() for f in str(item['facilities']).split(',')]
-        st.write(" ".join(f"`{fac}`" for fac in facilities_list))
-
-        st.write("")
-        st.link_button("Buka di Google Maps ↗", item['gmaps_link'], use_container_width=True)
-        
-        # Tombol tutup di dalam modal
-        if st.button("Tutup"):
-            st.session_state.modal_data = None
-            st.rerun() # Paksa rerun untuk menutup modal

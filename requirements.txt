@@ -8,4 +8,3 @@ scikit-learn
 psycopg2-binary
 gspread
 gspread-dataframe
-urllib.parse
