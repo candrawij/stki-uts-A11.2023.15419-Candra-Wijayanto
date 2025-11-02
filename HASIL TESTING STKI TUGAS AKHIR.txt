@@ -55,6 +55,11 @@ HASIL TESTING STKI TUGAS AKHIR
 
 2.0.1
 - peralihan deploy railway ke streamlit
+
+2.1
+- build_index.py menambahkan file info_tempat.csv berisi URL, dll untuk masuk ke file pkl
+- mesin pencari membaca URL foto dan gmaps
+- streamlit app memiliki tampilan yang lebih clean dan informatif
 - 
 
 
@@ -67,5 +72,6 @@ RENCANA
 - frekuensi dari baik, cukup, buruk
 - penggunaan atau, dan (multiple choice)
 - pencarian terbalik, jika cari tempat kemah, maka muncul query atau index apa saja di tempat itu
+- ada hitung hitungan harga total budget
 
 berapa presentase keakuratan mesin ini

@@ -1,9 +1,9 @@
 import pandas as pd
 import os
-import csv
-from datetime import datetime
 import joblib
+import streamlit as st
 from vsm_structures import Node, SlinkedList
+from datetime import datetime
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
@@ -67,27 +67,83 @@ def load_assets():
         print(f"❌ ERROR saat memuat aset VSM: {e}")
         return None, None, None
     
-FOLDER_LOG_RIWAYAT = os.path.join(BASE_DIR, 'Riwayat')
-FILE_LOG_RIWAYAT = os.path.join(FOLDER_LOG_RIWAYAT, 'riwayat_pencarian.csv')
-
-def log_pencarian(query, tokens, intent, region):
-    """Menyimpan detail pencarian ke file CSV di dalam folder 'Riwayat'."""
-    
+def log_pencarian_gsheets(query, tokens, intent, region):
+    """Mencatat detail pencarian ke Google Sheets."""
     try:
-        # Membuat folder 'Riwayat' jika belum ada
-        os.makedirs(FOLDER_LOG_RIWAYAT, exist_ok=True)
+        conn = st.connection("gsheets", type="gsheets")
+
+        # Buat data baru dalam satu baris (DataFrame)
+        data_baru = pd.DataFrame({
+            "timestamp": [datetime.now()],
+            "queri_mentah": [query],
+            "vsm_tokens_final": [' '.join(tokens)],
+            "intent_terdeteksi": [str(intent)],
+            "region_terdeteksi": [str(region)]
+        })
+
+        # Tambahkan baris baru ke sheet
+        # 'worksheet="Sheet1"' -> Sesuaikan dengan nama sheet Anda
+        conn.append_rows(worksheet="LogData", data=data_baru)
+
+    except Exception as e:
+        st.warning(f"Gagal mencatat riwayat GSheets: {e}")
+
+def load_logs_gsheets():
+    """
+    Mengambil data log dari Google Sheets untuk dashboard admin.
+    """
+    try:
+        conn = st.connection("gsheets", type="gsheets")
+        # PASTIKAN NAMA "LogData" SAMA DENGAN NAMA TAB DI GOOGLE SHEET ANDA
+        # ttl=300 -> Cache data selama 5 menit
+        df = conn.read(worksheet="LogData", ttl=300)
         
-        timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        # Hapus baris kosong jika ada
+        df = df.dropna(how="all")
+        
+        # Urutkan dari yang terbaru (asumsi data baru ditambah di akhir)
+        df = df.sort_index(ascending=False)
+        
+        return df.head(50) # Ambil 50 terbaru
+    except Exception as e:
+        st.sidebar.error(f"Gagal memuat log GSheets: {e}")
+        return pd.DataFrame() # Kembalikan DataFrame kosong
+
+#def log_pencarian_sql(query, tokens, intent, region):
+    """
+    Mencatat detail pencarian ke database SQL (Supabase).
+    """
+    try:
+        # 1. Ubah list token menjadi satu string agar bisa disimpan
         tokens_str = ' '.join(tokens)
-        data_row = [timestamp, query, tokens_str, str(intent), str(region)]
         
-        file_exists = os.path.isfile(FILE_LOG_RIWAYAT)
-        
-        with open(FILE_LOG_RIWAYAT, mode='a', newline='', encoding='utf-8') as f:
-            writer = csv.writer(f)
-            if not file_exists:
-                writer.writerow(['timestamp', 'query_mentah', 'vsm_tokens_final', 'intent_terdeteksi', 'region_terdeteksi'])
-            writer.writerow(data_row)
+        # 2. Inisialisasi koneksi (nama "supabase_db" dari secrets.toml)
+        conn = st.connection("supabase_db", type="sql")
+
+        # 3. Gunakan .session untuk eksekusi perintah INSERT
+        with conn.session as s:
+            
+            # 4. Siapkan perintah SQL (sesuai tabel BARU yang kita buat)
+            # Menggunakan :nama_variabel untuk keamanan (SQL Injection)
+            sql = text("""
+                INSERT INTO riwayat_pencarian 
+                    (kueri_mentah, vsm_tokens, intent_terdeteksi, region_terdeteksi)
+                VALUES 
+                    (:kueri, :tokens, :intent, :region)
+            """)
+            
+            # 5. Eksekusi perintah dengan data yang sebenarnya
+            s.execute(sql, {
+                "kueri": query,
+                "tokens": tokens_str,
+                "intent": str(intent),
+                "region": str(region)
+            })
+            
+            # 6. Commit (simpan) perubahan ke database
+            s.commit()
             
     except Exception as e:
-        print(f"\n!!! PERINGATAN: Gagal menyimpan riwayat pencarian: {e}")
+        # Jika gagal, jangan buat aplikasi crash.
+        # Cukup tampilkan peringatan di log terminal/Streamlit.
+        st.warning(f"Gagal mencatat riwayat pencarian SQL: {e}")

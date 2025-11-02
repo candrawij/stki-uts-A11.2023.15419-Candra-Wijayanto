@@ -74,6 +74,24 @@ df_metadata = df_corpus[['Doc_ID', 'Nama_Tempat', 'Lokasi', 'Rating']].copy()
 avg_rating_per_place = df_metadata.groupby('Nama_Tempat')['Rating'].mean().reset_index()
 avg_rating_per_place.rename(columns={'Rating': 'Avg_Rating'}, inplace=True)
 df_metadata = df_metadata.merge(avg_rating_per_place, on='Nama_Tempat', how='left')
+
+# Kita gabungkan data statis (foto, harga, dll) dari info_tempat.csv
+INFO_STATIS_PATH = os.path.join(BASE_DIR, 'info_tempat.csv')
+try:
+    df_info_statis = pd.read_csv(INFO_STATIS_PATH)
+    # Gabungkan data statis ke metadata utama berdasarkan 'Nama_Tempat'
+    df_metadata = df_metadata.merge(df_info_statis, on='Nama_Tempat', how='left')
+    print("✅ Berhasil menggabungkan data statis (foto, harga, dll).")
+except FileNotFoundError:
+    print(f"⚠️ PERINGATAN: {INFO_STATIS_PATH} tidak ditemukan.")
+    print("   Melanjutkan tanpa data foto/harga/fasilitas.")
+    # Buat kolom placeholder agar tidak error
+    df_metadata['Photo_URL'] = None
+    df_metadata['Gmaps_Link'] = None
+    df_metadata['Price_Desc'] = "Harga tidak tersedia"
+    df_metadata['Facilities'] = "Info fasilitas tidak tersedia"
+
+# Jadikan Doc_ID sebagai index
 df_metadata.set_index('Doc_ID', inplace=True)
 
 # --- SIMPAN HASIL INDEXING KE FILE ASET ---

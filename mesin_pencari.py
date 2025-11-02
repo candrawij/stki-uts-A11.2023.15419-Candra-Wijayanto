@@ -1,11 +1,11 @@
 import math
 import os
-import datetime
-import csv
 import joblib
 import utils
 import preprocessing
+import pandas as pd
 from vsm_structures import Node, SlinkedList
+import urllib.parse
 
 # ======================================================================
 # 1. VARIABEL GLOBAL ASET VSM
@@ -51,96 +51,122 @@ def analyze_full_query(query_text):
     return vsm_tokens, special_intent, region_filter
 
 # ======================================================================
-# 4. FUNGSI PENCARIAN UTAMA (dari Sel 12)
+# 4. FUNGSI PENCARIAN UTAMA (diperbarui dengan fallback kuat)
 # ======================================================================
 def search_by_keyword(query_tokens, special_intent, region_filter):
     """
     Melakukan pencarian VSM atau bypass jika intent 'ALL'.
     Menggunakan ASET GLOBAL (IDF_SCORES, LINKED_LIST_DATA, DF_METADATA).
     """
-    # Pemeriksaan Awal: Pastikan aset sudah dimuat
     if DF_METADATA is None or IDF_SCORES is None or LINKED_LIST_DATA is None:
         print("!!! ERROR: Aset VSM tidak dimuat. Pencarian dibatalkan.")
         return []
 
     # --- Jalur 1: Logika 'ALL' (Tanpa VSM) ---
     if special_intent == 'ALL':
-        df_unique_places = DF_METADATA[['Nama_Tempat', 'Lokasi', 'Avg_Rating']].drop_duplicates(subset='Nama_Tempat').copy()
+        df_unique_places = DF_METADATA.drop_duplicates(subset='Nama_Tempat').copy()
+        
         if region_filter:
-            # Filter berdasarkan region menggunakan .str.contains()
             df_unique_places = df_unique_places[df_unique_places['Lokasi'].str.lower().str.contains(region_filter, na=False)]
-        # Urutkan default berdasarkan rating
+        
         df_unique_places = df_unique_places.sort_values(by='Avg_Rating', ascending=False)
-        # Format hasil
-        final_recommendations = [{'name': row['Nama_Tempat'],'location': row['Lokasi'],'avg_rating': row['Avg_Rating'],'top_vsm_score': 0.0}
-                                 for _, row in df_unique_places.iterrows()]
+        
+        final_recommendations = []
+        for _, row in df_unique_places.iterrows():
+            
+            # --- PERBAIKAN LOGIKA FALLBACK (MENGGUNAKAN .get() dan pd.isna()) ---
+            photo_url = row.get('Photo_URL') 
+            if not photo_url or pd.isna(photo_url):
+                photo_url = f"https://placehold.co/400x200/556B2F/FFFFFF?text={urllib.parse.quote(str(row['Nama_Tempat']))}&font=poppins"
+            
+            gmaps_link = row.get('Gmaps_Link')
+            if not gmaps_link or pd.isna(gmaps_link):
+                gmaps_link = f"https://www.google.com/maps/search/?api=1&query={urllib.parse.quote(str(row['Nama_Tempat']) + ' ' + str(row['Lokasi']))}"
+            
+            facilities = row.get('Facilities')
+            if not facilities or pd.isna(facilities):
+                facilities = "Info fasilitas tidak tersedia"
+            # ---------------------------------
+
+            final_recommendations.append({
+                'name': row['Nama_Tempat'],
+                'location': row['Lokasi'],
+                'avg_rating': row['Avg_Rating'],
+                'top_vsm_score': 0.0,
+                'photo_url': photo_url, # Dijamin string
+                'gmaps_link': gmaps_link, # Dijamin string
+                'price': row.get('Price_Desc', 'Info harga tidak tersedia'),
+                'facilities': facilities # Dijamin string
+            })
         return final_recommendations
 
     # --- Jalur 2: Logika VSM (Jika bukan 'ALL') ---
-    if not query_tokens: return [] # Tidak ada token, tidak ada hasil VSM
+    if not query_tokens: return [] 
 
-    # 2. Vektorisasi Kueri (TF-IDF)
     query_tf = {word: query_tokens.count(word) for word in set(query_tokens)}
     query_weights = {}
-    involved_docs = set() # Optimasi: Hanya proses dokumen yang relevan
+    involved_docs = set() 
 
     for term, tf in query_tf.items():
-        if term in IDF_SCORES: # Gunakan IDF_SCORES global
+        if term in IDF_SCORES: 
             query_weights[term] = tf * IDF_SCORES[term]
-            # Kumpulkan ID dokumen dari Inverted Index
-            current_node = LINKED_LIST_DATA[term].head.nextval # Gunakan LINKED_LIST_DATA global
+            current_node = LINKED_LIST_DATA[term].head.nextval 
             while current_node is not None:
                 involved_docs.add(current_node.doc)
                 current_node = current_node.nextval
-    if not involved_docs: return [] # Tidak ada dokumen yang cocok sama sekali
+    if not involved_docs: return [] 
 
-    # 3. Hitung Cosine Similarity (Dot Product)
     doc_scores = {doc_id: 0 for doc_id in involved_docs}
     for term, W_q in query_weights.items():
-        current_node = LINKED_LIST_DATA[term].head.nextval # Gunakan LINKED_LIST_DATA global
+        current_node = LINKED_LIST_DATA[term].head.nextval 
         while current_node is not None:
             doc_id, W_d = current_node.doc, current_node.freq
-            doc_scores[doc_id] += W_d * W_q # Akumulasi skor dot product
+            if doc_id in doc_scores: 
+                doc_scores[doc_id] += W_d * W_q 
             current_node = current_node.nextval
 
-    # 4. Ranking Dokumen (Ulasan)
     ranked_results_by_doc = sorted(doc_scores.items(), key=lambda item: item[1], reverse=True)
 
-    # 5. Agregasi Hasil ke Level Tempat (Unik)
     final_recommendations, unique_names = [], set()
     for doc_id, vsm_score in ranked_results_by_doc:
         try:
-            meta = DF_METADATA.loc[doc_id] # Gunakan DF_METADATA global
-        except KeyError: continue # Lewati jika Doc_ID tidak ada di metadata
+            meta = DF_METADATA.loc[doc_id] 
+        except KeyError: continue 
 
-        # Filter region jika ada
         if region_filter and region_filter not in meta['Lokasi'].lower(): continue
 
         name = meta['Nama_Tempat']
-        # Pastikan setiap tempat hanya muncul sekali
         if name not in unique_names:
             unique_names.add(name)
+            
+            # --- PERBAIKAN LOGIKA FALLBACK (MENGGUNAKAN .get() dan pd.isna()) ---
+            photo_url = meta.get('Photo_URL') 
+            if not photo_url or pd.isna(photo_url):
+                photo_url = f"https://placehold.co/400x200/556B2F/FFFFFF?text={urllib.parse.quote(str(name))}&font=poppins"
+            
+            gmaps_link = meta.get('Gmaps_Link')
+            if not gmaps_link or pd.isna(gmaps_link):
+                gmaps_link = f"https://www.google.com/maps/search/?api=1&query={urllib.parse.quote(str(name) + ' ' + str(meta['Lokasi']))}"
+
+            facilities = meta.get('Facilities')
+            if not facilities or pd.isna(facilities):
+                facilities = "Info fasilitas tidak tersedia"
+            # ---------------------------------
+            
             final_recommendations.append({
                 'name': name,
                 'location': meta['Lokasi'],
                 'avg_rating': meta['Avg_Rating'],
-                'top_vsm_score': vsm_score
+                'top_vsm_score': vsm_score,
+                'photo_url': photo_url, # Dijamin string
+                'gmaps_link': gmaps_link, # Dijamin string
+                'price': meta.get('Price_Desc', 'Info harga tidak tersedia'),
+                'facilities': facilities # Dijamin string
             })
 
-    # 6. Sorting Akhir Berdasarkan Intent
     if special_intent == 'RATING_TOP':
         final_recommendations.sort(key=lambda x: x['avg_rating'], reverse=True)
     elif special_intent == 'RATING_BOTTOM':
         final_recommendations.sort(key=lambda x: x['avg_rating'], reverse=False)
-    # Jika intent None (VSM murni), biarkan terurut berdasarkan vsm_score (sudah dari langkah 4)
 
     return final_recommendations
-# ======================================================================
-# 5. FUNGSI LOG RIWAYAT (Wrapper Sederhana)
-# ======================================================================
-def log_pencarian(query, tokens, intent, region):
-    """Fungsi "wrapper" yang HANYA memanggil logger dari utils.py"""
-    try:
-        utils.log_pencarian(query, tokens, intent, region)
-    except Exception as e:
-        print(f"!!! PERINGATAN: Gagal memanggil fungsi log di utils: {e}")
