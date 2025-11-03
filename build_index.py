@@ -2,6 +2,7 @@ import pandas as pd
 import math
 import joblib
 import os
+import json
 
 try:
     from preprocessing import full_preprocessing
@@ -76,20 +77,52 @@ avg_rating_per_place.rename(columns={'Rating': 'Avg_Rating'}, inplace=True)
 df_metadata = df_metadata.merge(avg_rating_per_place, on='Nama_Tempat', how='left')
 
 # Kita gabungkan data statis (foto, harga, dll) dari info_tempat.csv
-INFO_STATIS_PATH = os.path.join(BASE_DIR, 'info_tempat.csv')
 try:
+    INFO_STATIS_PATH = os.path.join(BASE_DIR, KORPUS_FOLDER, 'info_tempat.csv')
     df_info_statis = pd.read_csv(INFO_STATIS_PATH)
+    print(f"✅ Berhasil memuat data statis dari: {INFO_STATIS_PATH}")
+
+    # Definisikan parser JSON yang aman HANYA UNTUK HARGA
+    def parse_price_json(json_str):
+        if pd.isna(json_str) or not isinstance(json_str, str) or not json_str.startswith('['):
+            return [] # Fallback: list kosong
+        try:
+            # Membaca string JSON dari CSV
+            return json.loads(json_str) 
+        except (json.JSONDecodeError, TypeError):
+            return [] # Fallback jika JSON rusak
+
+    # 1. Proses Price_Items (HARUSNYA Tipe List)
+    df_info_statis['Price_Items'] = df_info_statis['Price_Items'].apply(parse_price_json)
+    
+    # 2. Proses Facilities (HARUSNYA Tipe String)
+    #    JANGAN parse sebagai JSON. Cukup ganti NaN dengan string kosong.
+    df_info_statis['Facilities'] = df_info_statis['Facilities'].fillna("").astype(str)
+    
+    # 3. Proses kolom lain (Jaga-jaga)
+    df_info_statis['Photo_URL'] = df_info_statis['Photo_URL'].fillna("")
+    df_info_statis['Gmaps_Link'] = df_info_statis['Gmaps_Link'].fillna("")
+
     # Gabungkan data statis ke metadata utama berdasarkan 'Nama_Tempat'
     df_metadata = df_metadata.merge(df_info_statis, on='Nama_Tempat', how='left')
     print("✅ Berhasil menggabungkan data statis (foto, harga, dll).")
+
+    # 4. FINAL FALLBACK (PENTING untuk item di corpus_master yg TIDAK ADA di info_tempat)
+    #    Merge 'how=left' akan membuat NaN di baris yg tidak match
+    df_metadata['Photo_URL'] = df_metadata['Photo_URL'].fillna("")
+    df_metadata['Gmaps_Link'] = df_metadata['Gmaps_Link'].fillna("")
+    df_metadata['Facilities'] = df_metadata['Facilities'].fillna("")
+    # Ini adalah trik untuk mengisi NaN di kolom tipe objek/list
+    df_metadata['Price_Items'] = df_metadata['Price_Items'].apply(lambda x: [] if isinstance(x, float) and pd.isna(x) else x)
+
 except FileNotFoundError:
     print(f"⚠️ PERINGATAN: {INFO_STATIS_PATH} tidak ditemukan.")
     print("   Melanjutkan tanpa data foto/harga/fasilitas.")
-    # Buat kolom placeholder agar tidak error
-    df_metadata['Photo_URL'] = None
-    df_metadata['Gmaps_Link'] = None
-    df_metadata['Price_Desc'] = "Harga tidak tersedia"
-    df_metadata['Facilities'] = "Info fasilitas tidak tersedia"
+    # Buat kolom placeholder KONSISTEN
+    df_metadata['Photo_URL'] = ""
+    df_metadata['Gmaps_Link'] = ""
+    df_metadata['Price_Items'] = [[] for _ in range(len(df_metadata))] # Tipe List
+    df_metadata['Facilities'] = "" # Tipe String
 
 # Jadikan Doc_ID sebagai index
 df_metadata.set_index('Doc_ID', inplace=True)

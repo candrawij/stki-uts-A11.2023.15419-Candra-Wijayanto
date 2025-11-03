@@ -6,6 +6,7 @@ import preprocessing
 import pandas as pd
 from vsm_structures import Node, SlinkedList
 import urllib.parse
+import json # Pastikan json diimpor
 
 # ======================================================================
 # 1. VARIABEL GLOBAL ASET VSM
@@ -74,29 +75,32 @@ def search_by_keyword(query_tokens, special_intent, region_filter):
         final_recommendations = []
         for _, row in df_unique_places.iterrows():
             
-            # --- PERBAIKAN LOGIKA FALLBACK (MENGGUNAKAN .get() dan pd.isna()) ---
             photo_url = row.get('Photo_URL') 
-            if not photo_url or pd.isna(photo_url):
+            if not photo_url or pd.isna(photo_url): # pd.isna() aman di sini
                 photo_url = f"https://placehold.co/400x200/556B2F/FFFFFF?text={urllib.parse.quote(str(row['Nama_Tempat']))}&font=poppins"
 
             gmaps_link = row.get('Gmaps_Link')
             if not gmaps_link or pd.isna(gmaps_link):
                 gmaps_link = f"https://www.google.com/maps/search/?api=1&query={urllib.parse.quote(str(row['Nama_Tempat']) + ' ' + str(row['Lokasi']))}"
-            
+
+            # --- PERBAIKAN ValueError: Ganti pd.isna(list) ---
             facilities = row.get('Facilities')
-            if not facilities or pd.isna(facilities):
-                facilities = "Info fasilitas tidak tersedia"
-            # ---------------------------------
+            if not isinstance(facilities, list): # Cek jika bukan list (misal: nan, None)
+                facilities = [] 
+
+            price_items = row.get('Price_Items')
+            if not isinstance(price_items, list): # Cek jika bukan list
+                price_items = []
 
             final_recommendations.append({
                 'name': row['Nama_Tempat'],
                 'location': row['Lokasi'],
                 'avg_rating': row['Avg_Rating'],
                 'top_vsm_score': 0.0,
-                'photo_url': photo_url, # Dijamin string
-                'gmaps_link': gmaps_link, # Dijamin string
-                'price': row.get('Price_Desc', 'Info harga tidak tersedia'),
-                'facilities': facilities # Dijamin string
+                'photo_url': photo_url,
+                'gmaps_link': gmaps_link,
+                'price_items': price_items, 
+                'facilities': facilities 
             })
         return final_recommendations
 
@@ -139,7 +143,6 @@ def search_by_keyword(query_tokens, special_intent, region_filter):
         if name not in unique_names:
             unique_names.add(name)
             
-            # --- PERBAIKAN LOGIKA FALLBACK (MENGGUNAKAN .get() dan pd.isna()) ---
             photo_url = meta.get('Photo_URL') 
             if not photo_url or pd.isna(photo_url):
                 photo_url = f"https://placehold.co/400x200/556B2F/FFFFFF?text={urllib.parse.quote(str(name))}&font=poppins"
@@ -149,19 +152,22 @@ def search_by_keyword(query_tokens, special_intent, region_filter):
                 gmaps_link = f"https://www.google.com/maps/search/?api=1&query={urllib.parse.quote(str(name) + ' ' + str(meta['Lokasi']))}"
 
             facilities = meta.get('Facilities')
-            if not facilities or pd.isna(facilities):
-                facilities = "Info fasilitas tidak tersedia"
-            # ---------------------------------
+            if pd.isna(facilities) or not isinstance(facilities, str):
+                facilities = "" # Fallback ke string kosong
+
+            price_items = meta.get('Price_Items')
+            if not isinstance(price_items, list): # Cek jika bukan list
+                price_items = []
             
             final_recommendations.append({
                 'name': name,
                 'location': meta['Lokasi'],
                 'avg_rating': meta['Avg_Rating'],
                 'top_vsm_score': vsm_score,
-                'photo_url': photo_url, # Dijamin string
-                'gmaps_link': gmaps_link, # Dijamin string
-                'price': meta.get('Price_Desc', 'Info harga tidak tersedia'),
-                'facilities': facilities # Dijamin string
+                'photo_url': photo_url,
+                'gmaps_link': gmaps_link,
+                'price_items': price_items, # Ini adalah LIST
+                'facilities': facilities    # Ini adalah STRING
             })
 
     if special_intent == 'RATING_TOP':

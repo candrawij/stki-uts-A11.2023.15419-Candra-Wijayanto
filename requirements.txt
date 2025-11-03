@@ -8,3 +8,4 @@ scikit-learn
 psycopg2-binary
 gspread
 gspread-dataframe
+streamlit-modal

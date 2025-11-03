@@ -1,7 +1,10 @@
 import streamlit as st
 import mesin_pencari
 import pandas as pd
-import urllib.parse 
+import urllib.parse
+import json
+from streamlit_modal import Modal
+import os
 
 # --- FUNGSI LOGGING (NONAKTIF SEMENTARA) ---
 # ... (tetap nonaktif) ...
@@ -15,96 +18,17 @@ st.set_page_config(
     layout="wide"
 )
 
-# --- CSS KUSTOM ---
-# (CSS Anda dari sebelumnya, tidak perlu diubah)
-st.markdown("""
-    <style>
-    @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap');
-    
-    html, body, [class*="st-"], [class*="css-"] {
-        font-family: 'Poppins', sans-serif;
-    }
-    .main .block-container {
-        padding-top: 10vh; 
-        padding-bottom: 5rem;
-    }
-    [data-testid="stForm"] button[type="submit"] {
-        display: none;
-    }
-    [data-testid="stAppViewContainer"] > section h1 {
-        text-align: center;
-        font-size: 3.5rem; 
-        font-weight: 700;
-    }
-    [data-testid="stAppViewContainer"] > section [data-testid="stMarkdownContainer"]:nth-of-type(1) p {
-        text-align: center;
-        color: #FFFFFF; 
-        font-weight: 300; 
-        font-size: 1.1rem;
-    }
-    [data-testid="stTextInput"] > div > div {
-        border: 1px solid #AAA; 
-        border-radius: 50px; 
-        background-color: #AAA; 
-    }
-    [data-testid="stTextInput"] input {
-        color: #222; 
-        padding-left: 20px; 
-        font-weight: 400;
-    }
-    [data-testid="stTextInput"] > div > div:has(input:focus) {
-        border-color: #4285F4; 
-        box-shadow: 0 0 5px rgba(66, 133, 244, 0.5);
-    }
-    div[data-testid="stVerticalBlock"] > [data-testid="stContainer"] > [data-testid="stVerticalBlock"] {
-        border-radius: 1rem; 
-        border: 1px solid #eee; 
-        box-shadow: 0 4px 12px rgba(0,0,0,0.05); 
-        transition: transform 0.2s ease; 
-        background-color: #FFFFFF; 
-    }
-    div[data-testid="stVerticalBlock"] > [data-testid="stContainer"]:hover > [data-testid="stVerticalBlock"] {
-        transform: translateY(-5px); 
-        box-shadow: 0 8px 20px rgba(0,0,0,0.1);
-    }
-    div[data-testid="stImage"] > img {
-        border-radius: 1rem 1rem 0 0; 
-        object-fit: cover;
-        height: 180px; 
-        width: 100%;
-    }
-    [data-testid="stVerticalBlock"] > [data-testid="stContainer"] [data-testid="stBlock"] {
-        padding: 1rem; 
-    }
-    div[data-testid="stLinkButton"] a {
-        width: 100%;
-        text-align: center;
-        border-radius: 50px;
-    }
-    div[data-testid="stButton"] button {
-        width: 100%;
-        border-radius: 50px;
-        background-color: #f0f2f6; 
-        color: #333; 
-        border: 1px solid #ddd;
-    }
-    div[data-testid="stButton"] button:hover {
-        background-color: #e9ecef;
-        border: 1px solid #ccc;
-    }
-    div[data-testid="stModal"] .st-emotion-cache-1fsvtu1 {
-        background-color: #eee;
-        color: #333;
-        border: none;
-        border-radius: 16px;
-        padding: 5px 12px;
-        font-size: 0.9rem;
-        margin-right: 5px;
-        margin-bottom: 5px;
-        display: inline-block;
-    }
-    </style>
-    """, unsafe_allow_html=True)
+def load_css(file_name):
+    """Memuat file CSS eksternal."""
+    file_path = os.path.join(os.path.dirname(__file__), file_name)
+    try:
+        with open(file_path, "r") as f:
+            st.markdown(f"<style>{f.read()}</style>", unsafe_allow_html=True)
+    except FileNotFoundError:
+        st.error(f"File CSS '{file_name}' tidak ditemukan. Pastikan file ada di folder yang sama.")
+
+# Panggil fungsi untuk memuat style.css
+load_css("style.css")
 
 # ======================================================================
 # 2. INISIALISASI MESIN
@@ -150,20 +74,17 @@ if 'query' not in st.session_state:
 if 'search_performed' not in st.session_state:
     st.session_state.search_performed = False
 
-# --- Judul Utama ---
-# Buat layout kolom agar search bar bisa di tengah
-col_logo1, col_logo2, col_logo3 = st.columns([2, 3, 2])
-with col_logo2:
-    st.title("🏕️ Cari Kemah")
-    st.subheader("Mesin Pencari VSM untuk Tempat Kemah")
-    st.write("") # Spasi
+st.title("🏕️ Cari Kemah")
+st.markdown('<p class="sub-judul">Temukan tempat kemah ideal di Jawa Tengah & DIY"</p>', unsafe_allow_html=True)
+st.markdown('<p class="search-guide">Ketik misal: \'kamar mandi bersih\', \'sejuk di jogja\', \'terbaik di kendal\'</p>', unsafe_allow_html=True)
+st.write("") # Spasi
 
 col1, col_main, col3 = st.columns([1, 2, 1]) 
 with col_main:
     with st.form(key="search_form"):
         query_input = st.text_input(
-            "Cari tempat kemah...", 
-            placeholder="Ketik lalu tekan 'Enter'...",
+            "Cari tempat kemah...",
+            placeholder="Ketik kata kunci di sini...",
             label_visibility="collapsed"
         )
         tombol_cari = st.form_submit_button(label="Cari")
@@ -234,14 +155,15 @@ if st.session_state.search_performed:
                         # Tambahkan fallback untuk foto 'nan'
                         photo_url = item['photo_url']
                         if not isinstance(photo_url, str) or pd.isna(photo_url):
-                            photo_url = f"https://placehold.co/400x200/556B2F/FFFFFF?text={urllib.parse.quote(item['name'])}&font=poppins"
+                            photo_url = f"https://placehold.co/400x200/556B2F/FFFFFF?text={urllib.parse.quote(str(item['name']))}&font=poppins"
                         st.image(photo_url)
                         
                         st.markdown(f"""
-                            <h3 style='height: 3.5em; margin: 0; color: black; font-size: 1.25rem; font-weight: 600;'>
+                            <h3 style='height: 3.5em; margin: 0; color: var(--streamlit-theme-text-color); font-size: 1.25rem; font-weight: 600;'>
                                 {item['name']}
                             </h3>
                             """, unsafe_allow_html=True)
+                        
                         st.caption(f"📍 {item['location']}")
                         
                         col_meta1, col_meta2 = st.columns(2)
@@ -251,20 +173,75 @@ if st.session_state.search_performed:
                             st.metric(label="Relevansi", value=f"{item['top_vsm_score']:.3f}")
                         
                         st.write("")
+                                                    
+                        # 1. Buat modal unik untuk setiap item hasil pencarian
+                        modal_key = f"detail_modal_{index}" # Key unik berdasarkan index
+                        modal_title = f"🏕️ {item.get('name', 'Detail')}"
+                        modal = Modal(title=modal_title, key=modal_key)
                         
-                        # Tombol ini sekarang hanya mengatur state
-                        with st.expander("Lihat Detail", expanded=False):
-                            # Ambil data 'item' langsung, tak perlu state
+                        # 2. Buat tombol pemicu (INI MENGGANTIKAN HEADER EXPANDER)
+                        open_modal = st.button("Lihat Detail & Harga", key=f"btn_{index}", use_container_width=True)
+                        if open_modal:
+                            modal.open()
 
-                            st.subheader("Estimasi Harga")
-                            st.info(f"**{item['price']}**")
+                        # 3. Definisikan isi modal (HANYA JIKA DIBUKA)
+                        if modal.is_open():
+                            with modal.container():
+                                
+                                # --- TAMPILAN SESUAI SCREENSHOT ANDA ---
+                                st.markdown(f"**📍 Lokasi:** {item.get('location', 'N/A')}")
+                                st.divider()
 
-                            st.subheader("Fasilitas")
-                            facilities_list = [f.strip() for f in str(item['facilities']).split(',')]
-                            st.write(" ".join(f"`{fac}`" for fac in facilities_list))
+                                # --- Logika Harga (Tampilan Rapi Sesuai Screenshot) ---
+                                st.markdown(f"**Estimasi Harga**") # Judul Bold
+                                price_items_list = item.get('price_items', [])
+                                total_harga_dasar = 0
+                                harga_items_ditemukan = False
 
-                            st.write("")
-                            st.link_button("Buka di Google Maps ↗", item['gmaps_link'], use_container_width=True)
+                                if not price_items_list:
+                                    st.write("- Info harga tidak tersedia.")
+                                else:
+                                    for price_item in price_items_list:
+                                        try:
+                                            item_name = str(price_item.get('item', 'Item tidak diketahui'))
+                                            harga_int = int(price_item.get('harga', 0))
+                                            harga_items_ditemukan = True
+                                        except (ValueError, TypeError, AttributeError):
+                                            continue 
+                                        
+                                        st.write(f"- {item_name}: **Rp {harga_int:,}**") # Tampilan list
+                                        
+                                        # Logika total (tetap sama)
+                                        item_name_lower = item_name.lower()
+                                        if 'sewa' not in item_name_lower and 'perlengkapan' not in item_name_lower:
+                                            total_harga_dasar += harga_int
+                                    
+                                    if harga_items_ditemukan:
+                                        st.write("---") # Pemisah
+                                        st.markdown(f"**Estimasi Total (Dasar): Rp {total_harga_dasar:,}**")
+                                    elif price_items_list:
+                                        st.write("Format data harga tidak valid.")
 
-                if (index + 1) % 3 == 0:
-                    st.write("") 
+
+                                st.write("") # Spasi
+                                
+                                # --- Logika Fasilitas (Tampilan Rapi Sesuai Screenshot) ---
+                                st.markdown(f"**Fasilitas**") # Judul Bold
+                                facilities_str = item.get('facilities', "")
+                                
+                                if not facilities_str:
+                                    st.write("- Info fasilitas tidak tersedia.")
+                                else:
+                                    facilities_list = [f.strip() for f in facilities_str.split('|') if f.strip()]
+                                    if not facilities_list:
+                                        st.write("- Info fasilitas tidak tersedia.")
+                                    else:
+                                        # Tampilkan sebagai list (sesuai screenshot)
+                                        for fac in facilities_list:
+                                            st.write(f"- {fac}")
+
+                                st.write("") # Spasi
+                                st.link_button("Buka di Google Maps ↗", item.get('gmaps_link', '#'), use_container_width=True)
+
+            if (index + 1) % 3 == 0:
+                st.write("") 
