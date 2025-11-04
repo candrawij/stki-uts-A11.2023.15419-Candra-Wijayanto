@@ -3,7 +3,6 @@ import mesin_pencari
 import pandas as pd
 import urllib.parse
 import json
-from streamlit_modal import Modal
 import os
 
 # --- FUNGSI LOGGING (NONAKTIF SEMENTARA) ---
@@ -73,6 +72,8 @@ if 'query' not in st.session_state:
     st.session_state.query = ""
 if 'search_performed' not in st.session_state:
     st.session_state.search_performed = False
+if 'selected_item' not in st.session_state: # <-- State untuk st.dialog
+    st.session_state.selected_item = None
 
 st.title("🏕️ Cari Kemah")
 st.markdown('<p class="sub-judul">Temukan tempat kemah ideal di Jawa Tengah & DIY"</p>', unsafe_allow_html=True)
@@ -94,12 +95,8 @@ with col_main:
 # ======================================================================
 
 # --- Inisialisasi state jika belum ada ---
-if 'search_performed' not in st.session_state:
-    st.session_state.search_performed = False
 if 'results_df' not in st.session_state:
     st.session_state.results_df = pd.DataFrame()
-if 'modal_data' not in st.session_state:
-    st.session_state.modal_data = None
 if 'query_info' not in st.session_state:
     st.session_state.query_info = {}
 
@@ -147,24 +144,27 @@ if st.session_state.search_performed:
         else:
             grid_cols = st.columns(3) 
             
-            for index, item in df_results.iterrows():
+            for index, item_row in df_results.iterrows():
+
+                item = item_row.to_dict()
                 col = grid_cols[index % 3]
                 
                 with col:
                     with st.container(border=True):
                         # Tambahkan fallback untuk foto 'nan'
-                        photo_url = item['photo_url']
-                        if not isinstance(photo_url, str) or pd.isna(photo_url):
-                            photo_url = f"https://placehold.co/400x200/556B2F/FFFFFF?text={urllib.parse.quote(str(item['name']))}&font=poppins"
+                        photo_url = item.get('photo_url')
+                        if not isinstance(photo_url, str) or pd.isna(photo_url) or not photo_url.startswith("http"):
+                            # Gunakan resolusi 16:9
+                            photo_url = f"https://placehold.co/600x337/E0E0E0/333333?text={urllib.parse.quote(str(item.get('name')))}&font=poppins"
                         st.image(photo_url)
                         
                         st.markdown(f"""
                             <h3 style='height: 3.5em; margin: 0; color: var(--streamlit-theme-text-color); font-size: 1.25rem; font-weight: 600;'>
-                                {item['name']}
+                                {item.get('name', 'Nama Tidak Tersedia')}
                             </h3>
                             """, unsafe_allow_html=True)
                         
-                        st.caption(f"📍 {item['location']}")
+                        st.caption(f"📍 {item.get('location', 'Lokasi Tidak Tersedia')}")
                         
                         col_meta1, col_meta2 = st.columns(2)
                         with col_meta1:
@@ -174,74 +174,75 @@ if st.session_state.search_performed:
                         
                         st.write("")
                                                     
-                        # 1. Buat modal unik untuk setiap item hasil pencarian
-                        modal_key = f"detail_modal_{index}" # Key unik berdasarkan index
-                        modal_title = f"🏕️ {item.get('name', 'Detail')}"
-                        modal = Modal(title=modal_title, key=modal_key)
+                        if st.button("Lihat Detail & Harga", key=f"btn_{index}", use_container_width=True):
+                            st.session_state.selected_item = item # Simpan data item (dict)
+
+        # --- 3. BLOK DIALOG (DITEMPATKAN SETELAH LOOP) ---
+        # Ini akan berjalan jika 'selected_item' BUKAN None
+        if st.session_state.selected_item:
+            # Ambil item yang dipilih dari state
+            item = st.session_state.selected_item
+            
+            # 1. Buat instance dialog
+            @st.dialog(title=f"🏕️ {item.get('name', 'Detail')}")
+            def tampilkan_detail_dialog():
+
+                # 2. Tambahkan elemen ke instance 'dialog.'
+                st.markdown(f"**📍 Lokasi:** {item.get('location', 'N/A')}")
+                st.divider()
+
+                # --- Logika Harga ---
+                st.markdown(f"**Estimasi Harga**")
+                price_items_list = item.get('price_items', [])
+                total_harga_dasar = 0
+                harga_items_ditemukan = False
+
+                if not price_items_list:
+                    st.write("- Info harga tidak tersedia.")
+                else:
+                    for price_item in price_items_list:
+                        try:
+                            item_name = str(price_item.get('item', 'Item tidak diketahui'))
+                            harga_int = int(price_item.get('harga', 0))
+                            harga_items_ditemukan = True
+                        except (ValueError, TypeError, AttributeError):
+                            continue 
                         
-                        # 2. Buat tombol pemicu (INI MENGGANTIKAN HEADER EXPANDER)
-                        open_modal = st.button("Lihat Detail & Harga", key=f"btn_{index}", use_container_width=True)
-                        if open_modal:
-                            modal.open()
+                        st.write(f"- {item_name}: **Rp {harga_int:,}**")
+                        
+                        item_name_lower = item_name.lower()
+                        if 'sewa' not in item_name_lower and 'perlengkapan' not in item_name_lower:
+                            total_harga_dasar += harga_int
+                    
+                    if harga_items_ditemukan:
+                        st.write("---")
+                        st.markdown(f"**Estimasi Total (Dasar): Rp {total_harga_dasar:,}**")
+                    elif price_items_list:
+                            st.write("Format data harga tidak valid.")
 
-                        # 3. Definisikan isi modal (HANYA JIKA DIBUKA)
-                        if modal.is_open():
-                            with modal.container():
-                                
-                                # --- TAMPILAN SESUAI SCREENSHOT ANDA ---
-                                st.markdown(f"**📍 Lokasi:** {item.get('location', 'N/A')}")
-                                st.divider()
+                st.write("")
+                
+                # --- Logika Fasilitas ---
+                st.markdown(f"**Fasilitas**")
+                facilities_str = item.get('facilities', "")
+                
+                if not facilities_str:
+                    st.write("- Info fasilitas tidak tersedia.")
+                else:
+                    facilities_list = [f.strip() for f in facilities_str.split('|') if f.strip()]
+                    if not facilities_list:
+                        st.write("- Info fasilitas tidak tersedia.")
+                    else:
+                        for fac in facilities_list:
+                            st.write(f"- {fac}")
 
-                                # --- Logika Harga (Tampilan Rapi Sesuai Screenshot) ---
-                                st.markdown(f"**Estimasi Harga**") # Judul Bold
-                                price_items_list = item.get('price_items', [])
-                                total_harga_dasar = 0
-                                harga_items_ditemukan = False
+                st.write("")
+                st.link_button("Buka di Google Maps ↗", item.get('gmaps_link', '#'), use_container_width=True)
+                
+                # Tombol "Tutup" di dalam dialog
+                if st.button("Tutup", use_container_width=True, key="dialog_close"):
+                    st.session_state.selected_item = None
+                    st.rerun() # Wajib untuk menutup dialog via tombol
+            
 
-                                if not price_items_list:
-                                    st.write("- Info harga tidak tersedia.")
-                                else:
-                                    for price_item in price_items_list:
-                                        try:
-                                            item_name = str(price_item.get('item', 'Item tidak diketahui'))
-                                            harga_int = int(price_item.get('harga', 0))
-                                            harga_items_ditemukan = True
-                                        except (ValueError, TypeError, AttributeError):
-                                            continue 
-                                        
-                                        st.write(f"- {item_name}: **Rp {harga_int:,}**") # Tampilan list
-                                        
-                                        # Logika total (tetap sama)
-                                        item_name_lower = item_name.lower()
-                                        if 'sewa' not in item_name_lower and 'perlengkapan' not in item_name_lower:
-                                            total_harga_dasar += harga_int
-                                    
-                                    if harga_items_ditemukan:
-                                        st.write("---") # Pemisah
-                                        st.markdown(f"**Estimasi Total (Dasar): Rp {total_harga_dasar:,}**")
-                                    elif price_items_list:
-                                        st.write("Format data harga tidak valid.")
-
-
-                                st.write("") # Spasi
-                                
-                                # --- Logika Fasilitas (Tampilan Rapi Sesuai Screenshot) ---
-                                st.markdown(f"**Fasilitas**") # Judul Bold
-                                facilities_str = item.get('facilities', "")
-                                
-                                if not facilities_str:
-                                    st.write("- Info fasilitas tidak tersedia.")
-                                else:
-                                    facilities_list = [f.strip() for f in facilities_str.split('|') if f.strip()]
-                                    if not facilities_list:
-                                        st.write("- Info fasilitas tidak tersedia.")
-                                    else:
-                                        # Tampilkan sebagai list (sesuai screenshot)
-                                        for fac in facilities_list:
-                                            st.write(f"- {fac}")
-
-                                st.write("") # Spasi
-                                st.link_button("Buka di Google Maps ↗", item.get('gmaps_link', '#'), use_container_width=True)
-
-            if (index + 1) % 3 == 0:
-                st.write("") 
+            tampilkan_detail_dialog()

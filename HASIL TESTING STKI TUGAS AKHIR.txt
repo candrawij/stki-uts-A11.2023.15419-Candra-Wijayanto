@@ -3,8 +3,6 @@ HASIL TESTING STKI TUGAS AKHIR
 - pembuatan kamus dengan asisten jadi lebih praktis, tapi masih harus menginputkan kata lagi ke kamus secara manual (bershikan duplikasi dan join)
 - masih ada kesalahan di kunci yang diproses
 - pengelompokan wilayah seperti pantai, bukit, dll masih membingungkan sistem, mencari dari vsm atau teks mentah tidak begitu akurat
-#2.0
-- 
 
 1.0
 - pembuatan mesin pencarian
@@ -62,6 +60,13 @@ HASIL TESTING STKI TUGAS AKHIR
 - streamlit app memiliki tampilan yang lebih clean dan informatif
 - tombol popup untuk detail informasi dari lokasi, harga dan fasilitas
 - harga bisa ditotal, kecuali sewa, hanya harga dasar
+
+2.1.1
+- pembuatan popup pada menu lihat detail & harga
+- scaling foto yang konsisten, sehingga card terlihat rapi
+
+# foto sudah benar ukurannya dan card rapi, tapi foto terpotong dan tampilannya kurang terlihat, dolusi antara muat foto ke lokal atau cari foto yg sesuai
+# info detail tidak memakai expand karena info yang diberikan terlalu kecil dan sedikit, tidak memakai modul karena error pada kode tampilnya
 
 
 RENCANA
