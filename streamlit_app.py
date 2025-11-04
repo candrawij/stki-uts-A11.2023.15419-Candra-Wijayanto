@@ -4,6 +4,7 @@ import pandas as pd
 import urllib.parse
 import json
 import os
+import re
 
 # --- FUNGSI LOGGING (NONAKTIF SEMENTARA) ---
 # ... (tetap nonaktif) ...
@@ -153,10 +154,15 @@ if st.session_state.search_performed:
                     with st.container(border=True):
                         # Tambahkan fallback untuk foto 'nan'
                         photo_url = item.get('photo_url')
-                        if not isinstance(photo_url, str) or pd.isna(photo_url) or not photo_url.startswith("http"):
-                            # Gunakan resolusi 16:9
+                        if (not isinstance(photo_url, str) or 
+                            pd.isna(photo_url) or 
+                            not photo_url.startswith("http") or 
+                            "googleusercontent.com" in photo_url):  
+                            
+                            # URL ini menghasilkan placeholder abu-abu
                             photo_url = f"https://placehold.co/600x337/E0E0E0/333333?text={urllib.parse.quote(str(item.get('name')))}&font=poppins"
-                        st.image(photo_url)
+
+                        st.image(photo_url) 
                         
                         st.markdown(f"""
                             <h3 style='height: 3.5em; margin: 0; color: var(--streamlit-theme-text-color); font-size: 1.25rem; font-weight: 600;'>
@@ -229,12 +235,15 @@ if st.session_state.search_performed:
                 if not facilities_str:
                     st.write("- Info fasilitas tidak tersedia.")
                 else:
-                    facilities_list = [f.strip() for f in facilities_str.split('|') if f.strip()]
+                    # 2. GUNAKAN 're.split' UNTUK SPLIT YANG LEBIH KUAT
+                    #    Memisahkan berdasarkan | , atau newline
+                    facilities_list = [f.strip() for f in re.split(r'[|,]', facilities_str) if f.strip()]
+                    
                     if not facilities_list:
                         st.write("- Info fasilitas tidak tersedia.")
                     else:
                         for fac in facilities_list:
-                            st.write(f"- {fac}")
+                            st.write(f"- {fac}") # Tampilkan satu per satu
 
                 st.write("")
                 st.link_button("Buka di Google Maps ↗", item.get('gmaps_link', '#'), use_container_width=True)

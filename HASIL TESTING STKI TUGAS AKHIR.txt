@@ -68,6 +68,16 @@ HASIL TESTING STKI TUGAS AKHIR
 # foto sudah benar ukurannya dan card rapi, tapi foto terpotong dan tampilannya kurang terlihat, dolusi antara muat foto ke lokal atau cari foto yg sesuai
 # info detail tidak memakai expand karena info yang diberikan terlalu kecil dan sedikit, tidak memakai modul karena error pada kode tampilnya
 
+2.1.2
+- penambahan korpus
+- build_index untuk membaca fasilitas di info_tempat lebih fleksibel, bisa membaca koma ataupun pipa
+
+# perhitungan harga masih jelek, belum bisa memisah hari libur dan hari biasa
+# history masih belum ditambahkan
+# beberapa query menghilangkan fitur harga dan fasilitas
+# waebsite masih terlalu putih, tidak ada fariasi warna
+# foto dari google tidak bisa dibaca, harus ganti foto
+
 
 RENCANA
 - pembuatan website
@@ -76,5 +86,10 @@ RENCANA
 - frekuensi dari baik, cukup, buruk
 - penggunaan atau, dan (multiple choice)
 - pencarian terbalik, jika cari tempat kemah, maka muncul query atau index apa saja di tempat itu
+- tampilandiperbaiki untuk mobile
+- smart, bisa mengenali topik dari review, contoh tahu harga tiket, dll
+- informasi jam kerja (pengalaman di sermo, belum masuk jam kerja suruh nunggu dlu)
 
-berapa presentase keakuratan mesin ini
+NOTE
+- waduk sermo banyak tempat kemahnya, jadi bisa dispesifikkan lagi agar tahu ada tempat kemah apa aja
+- di karimun juga sama ada Lokasi-Lokasi Camping Favorit di Karimunjawa, bisa diperinci lagi

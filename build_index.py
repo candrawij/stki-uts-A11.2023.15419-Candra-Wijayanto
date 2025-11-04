@@ -2,7 +2,7 @@ import pandas as pd
 import math
 import joblib
 import os
-import json
+import json 
 
 try:
     from preprocessing import full_preprocessing
@@ -18,6 +18,7 @@ KORPUS_FILENAME = 'corpus_master.csv'
 DATASET_PATH = os.path.join(BASE_DIR, KORPUS_FOLDER, KORPUS_FILENAME)
 
 try:
+    print(f"🔄 Memuat korpus dari: {DATASET_PATH} ...")
     df_corpus = pd.read_csv(DATASET_PATH)
     print(f"✅ Berhasil memuat korpus dari: {DATASET_PATH}")
 except FileNotFoundError:
@@ -30,6 +31,7 @@ except Exception as e:
 
 # --- 3. APLIKASI PREPROCESSING & HITUNG DF & IDF (INDEXING PHASE 1) ---
 # Pastikan dataset sudah dimuat di df_corpus
+print("🔄 Memulai preprocessing dan perhitungan DF/IDF...")
 df_corpus['Teks_Mentah'] = df_corpus['Teks_Mentah'].fillna('')
 df_corpus['Clean_Tokens'] = df_corpus['Teks_Mentah'].apply(full_preprocessing)
 
@@ -43,8 +45,10 @@ for tokens in df_corpus['Clean_Tokens']:
 idf_scores = {}
 for term, count in df_counts.items():
     idf_scores[term] = math.log10(N / count)
+print("✅ Selesai preprocessing dan perhitungan DF/IDF.")
 
 # --- 4. BUILDING THE INVERTED INDEX WITH TF-IDF (INDEXING PHASE 2) ---
+print("🔄 Membangun inverted index dengan TF-IDF...")
 linked_list_data = {}
 unique_words_all = set(df_counts.keys())
 
@@ -78,6 +82,7 @@ df_metadata = df_metadata.merge(avg_rating_per_place, on='Nama_Tempat', how='lef
 
 # Kita gabungkan data statis (foto, harga, dll) dari info_tempat.csv
 try:
+    print("🔄 Memuat data statis (foto, harga, dll)...")
     INFO_STATIS_PATH = os.path.join(BASE_DIR, KORPUS_FOLDER, 'info_tempat.csv')
     df_info_statis = pd.read_csv(INFO_STATIS_PATH)
     print(f"✅ Berhasil memuat data statis dari: {INFO_STATIS_PATH}")
@@ -92,14 +97,13 @@ try:
         except (json.JSONDecodeError, TypeError):
             return [] # Fallback jika JSON rusak
 
-    # 1. Proses Price_Items (HARUSNYA Tipe List)
+    # 1. Proses Price_Items (HARUSNYA Tipe List) -> BENAR
     df_info_statis['Price_Items'] = df_info_statis['Price_Items'].apply(parse_price_json)
     
-    # 2. Proses Facilities (HARUSNYA Tipe String)
-    #    JANGAN parse sebagai JSON. Cukup ganti NaN dengan string kosong.
+    # 2. Proses Facilities (HARUSNYA Tipe String) -> BENAR
     df_info_statis['Facilities'] = df_info_statis['Facilities'].fillna("").astype(str)
     
-    # 3. Proses kolom lain (Jaga-jaga)
+    # 3. Proses kolom lain (Jaga-jaga) -> BENAR
     df_info_statis['Photo_URL'] = df_info_statis['Photo_URL'].fillna("")
     df_info_statis['Gmaps_Link'] = df_info_statis['Gmaps_Link'].fillna("")
 
@@ -107,12 +111,10 @@ try:
     df_metadata = df_metadata.merge(df_info_statis, on='Nama_Tempat', how='left')
     print("✅ Berhasil menggabungkan data statis (foto, harga, dll).")
 
-    # 4. FINAL FALLBACK (PENTING untuk item di corpus_master yg TIDAK ADA di info_tempat)
-    #    Merge 'how=left' akan membuat NaN di baris yg tidak match
+    # 4. FINAL FALLBACK -> BENAR
     df_metadata['Photo_URL'] = df_metadata['Photo_URL'].fillna("")
     df_metadata['Gmaps_Link'] = df_metadata['Gmaps_Link'].fillna("")
     df_metadata['Facilities'] = df_metadata['Facilities'].fillna("")
-    # Ini adalah trik untuk mengisi NaN di kolom tipe objek/list
     df_metadata['Price_Items'] = df_metadata['Price_Items'].apply(lambda x: [] if isinstance(x, float) and pd.isna(x) else x)
 
 except FileNotFoundError:
@@ -133,6 +135,7 @@ OUTPUT_DIR = 'Assets'
 os.makedirs(OUTPUT_DIR, exist_ok=True)
 
 try:
+    print("🔄 Menyimpan file aset (.pkl)...")
     joblib.dump(idf_scores, os.path.join(OUTPUT_DIR, 'idf_scores.pkl'))
     joblib.dump(linked_list_data, os.path.join(OUTPUT_DIR, 'linked_list_data.pkl'))
     joblib.dump(df_metadata, os.path.join(OUTPUT_DIR, 'df_metadata.pkl'))
