@@ -7,7 +7,7 @@ Proyek ini memiliki dua fungsi:
 2.  **Sebagai Portofolio (RAG):** Logika inti VSM dari proyek ini juga digunakan sebagai *retriever* untuk aplikasi web RAG (Retrieval-Augmented Generation) berbasis Streamlit.
 
 **URL Deployment (Aplikasi Web RAG):**
-[https://URL_STREAMLIT_ANDA_DI_SINI.streamlit.app/](https://URL_STREAMLIT_ANDA_DI_SINI.streamlit.app/)
+[https://candrawij-tempat-kemah-web-v2-streamlit-app-dbcga0.streamlit.app/](https://candrawij-tempat-kemah-web-v2-streamlit-app-dbcga0.streamlit.app/)
 
 ---
 
@@ -103,7 +103,7 @@ Perbandingan performa *ranking* antara dua skema pembobotan VSM:
 ### Langkah 1: Setup Lingkungan
 ```bash
 # 1. Clone repositori
-git clone [URL_GITHUB_ANDA]
+git clone https://github.com/candrawij/tempat-kemah-web-v2.git
 cd CampGround-Search
 
 # 2. Buat virtual environment (disarankan)
@@ -118,16 +118,16 @@ Sebelum menjalankan aplikasi, Anda harus membuat file indeks dari korpus.
 
 ```bash
 python build_index.py
-(Tunggu hingga selesai dan folder Assets/ terisi).
 ```
+(Tunggu hingga selesai dan folder Assets/ terisi).
 
 Langkah 3: Menjalankan Evaluasi (UTS)
 Untuk mereplikasi hasil evaluasi di atas.
 
 ```bash
 python eval.py
-(Akan menampilkan tabel P/R/F1 dan MAP@10).
 ```
+(Akan menampilkan tabel P/R/F1 dan MAP@10).
 
 Langkah 4: Menjalankan CLI Orchestrator (Soal 05)
 Untuk berinteraksi dengan mesin pencari via terminal.
