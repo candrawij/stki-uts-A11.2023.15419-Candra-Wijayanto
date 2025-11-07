@@ -24,7 +24,34 @@ Sistem ini dirancang dengan logika inti yang terpisah di dalam folder `src/`, ya
 ## 2. Struktur File
 
 Struktur repositori ini dirancang untuk memisahkan data, aset, logika inti, dan skrip yang dapat dieksekusi.
-CampGround Search/ ├── Assets/ # Output indeks .pkl (Hasil build_index.py) │ ├── boolean_index.pkl │ ├── df_metadata.pkl │ ├── idf_scores.pkl │ └── vsm_index_tf.pkl ├── Documents/ # Data mentah (korpus) │ ├── corpus_master.csv │ └── info_tempat.csv ├── Kamus/ # Kamus untuk preprocessing │ └── ... ├── src/ # Modul Logika Inti │ ├── init.py # (Penting agar 'src' dikenali sebagai paket) │ ├── boolean_ir.py # (Logika Model Boolean) │ ├── mesin_pencari.py # (Logika Model VSM & Augmentasi RAG) │ ├── preprocessing.py # (Logika preprocessing teks) │ ├── utils.py # (Fungsi helper, pemuat aset) │ └── vsm_structures.py # (Class Node & SlinkedList) │ ├── .gitignore # (Mengabaikan .venv, pycache, dll.) ├── build_index.py # [BISA DIJALANKAN] Skrip untuk build indeks ├── eval.py # [BISA DIJALANKAN] Skrip evaluasi (Soal 03, 04, 05) ├── gold_set.json # (Kunci jawaban manual untuk eval.py) ├── README.md # (Dokumentasi ini) ├── requirements.txt # (Dependensi Python) ├── search.py # [BISA DIJALANKAN] CLI Orchestrator (Soal 05) ├── streamlit_app.py # [BISA DIJALANKAN] Aplikasi Web (Portofolio) └── style.css # (CSS untuk Streamlit)
+CampGround Search/
+├── Assets/                 # Output indeks .pkl (Hasil build_index.py)
+│   ├── boolean_index.pkl
+│   ├── df_metadata.pkl
+│   ├── idf_scores.pkl
+│   └── vsm_index_tf.pkl
+├── Documents/              # Data mentah (korpus)
+│   ├── corpus_master.csv
+│   └── info_tempat.csv
+├── Kamus/                  # Kamus untuk preprocessing
+│   └── ...
+├── src/                    # Modul Logika Inti
+│   ├── __init__.py         # (Penting agar 'src' dikenali sebagai paket)
+│   ├── boolean_ir.py       # (Logika Model Boolean)
+│   ├── mesin_pencari.py    # (Logika Model VSM & Augmentasi RAG
+│   ├── preprocessing.py    # (Logika preprocessing teks)
+│   ├── utils.py            # (Fungsi helper, pemuat aset)
+│   └── vsm_structures.py   # (Class Node & SlinkedList)
+│
+├── .gitignore              # (Mengabaikan .venv, pycache, dll.)
+├── build_index.py          # [BISA DIJALANKAN] Skrip untuk build indeks
+├── eval.py                 # [BISA DIJALANKAN] Skrip evaluasi
+├── gold_set.json           # (Kunci jawaban manual untuk eval.py)
+├── README.md               
+├── requirements.txt        # (Dependensi Python)
+├── search.py               # [BISA DIJALANKAN] CLI Orchestrator
+├── streamlit_app.py        # [BISA DIJALANKAN] Aplikasi Web (Portofolio)
+└── style.css               # (CSS untuk Streamlit)
 
 ## 3. Metode & Implementasi
 
@@ -104,7 +131,7 @@ Perbandingan performa *ranking* antara dua skema pembobotan VSM:
 ```bash
 # 1. Clone repositori
 git clone https://github.com/candrawij/tempat-kemah-web-v2.git
-cd CampGround-Search
+cd tempat-kemah-web-v2
 
 # 2. Buat virtual environment (disarankan)
 python -m venv .venv
