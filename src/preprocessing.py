@@ -1,6 +1,6 @@
 import re
 import os
-import utils
+from . import utils
 from Sastrawi.Stemmer.StemmerFactory import StemmerFactory
 from nltk.corpus import stopwords
 

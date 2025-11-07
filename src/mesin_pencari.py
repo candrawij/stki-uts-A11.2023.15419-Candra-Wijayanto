@@ -1,18 +1,18 @@
 import math
 import os
 import joblib
-import utils
-import preprocessing
 import pandas as pd
-from vsm_structures import Node, SlinkedList
 import urllib.parse
-import json # Pastikan json diimpor
+import json
+from . import utils
+from . import preprocessing
+from .vsm_structures import Node, SlinkedList
 
 # ======================================================================
 # 1. VARIABEL GLOBAL ASET VSM
 # ======================================================================
 IDF_SCORES = None
-LINKED_LIST_DATA = None
+VSM_INDEX_TF = None
 DF_METADATA = None
 
 # ======================================================================
@@ -20,12 +20,12 @@ DF_METADATA = None
 # ======================================================================
 def initialize_mesin():
     """Memuat semua aset VSM (.pkl) ke dalam variabel global."""
-    global IDF_SCORES, LINKED_LIST_DATA, DF_METADATA 
+    global IDF_SCORES, VSM_INDEX_TF, DF_METADATA 
     
     print("--- Memuat Aset VSM (Indeks, IDF, Metadata)... ---")
-    IDF_SCORES, LINKED_LIST_DATA, DF_METADATA = utils.load_assets()
+    IDF_SCORES, VSM_INDEX_TF, DF_METADATA = utils.load_assets()
     
-    if IDF_SCORES is None or LINKED_LIST_DATA is None or DF_METADATA is None:
+    if IDF_SCORES is None or VSM_INDEX_TF is None or DF_METADATA is None:
         print("❌ FATAL ERROR: Gagal memuat aset VSM. Mesin pencari tidak akan berfungsi.")
     else:
         print("✅ Mesin Pencari (VSM) Siap.")
@@ -52,14 +52,84 @@ def analyze_full_query(query_text):
     return vsm_tokens, special_intent, region_filter
 
 # ======================================================================
-# 4. FUNGSI PENCARIAN UTAMA (diperbarui dengan fallback kuat)
+# 4. FUNGSI INTI VSM (DOT PRODUCT)
+# ======================================================================
+def _calculate_vsm_scores(query_tokens, weighting_scheme='tfidf'):
+    """
+    Fungsi inti VSM yang MURNI menghitung skor dot product.
+    Fungsi ini akan digunakan oleh 'eval.py'.
+    
+    CATATAN: 'weighting_scheme' saat ini belum diimplementasikan penuh
+    karena 'build_index.py' Anda menyimpan TF-IDF yang sudah jadi.
+    Ini akan kita modifikasi di Bagian 3 checklist.
+    
+    Mengembalikan: list[(doc_id, score)]
+    """
+    if DF_METADATA is None or IDF_SCORES is None or VSM_INDEX_TF is None:
+        print("!!! ERROR: Aset VSM tidak dimuat. Perhitungan skor dibatalkan.")
+        return []
+        
+    if not query_tokens: 
+        return [] 
+
+    query_tf = {word: query_tokens.count(word) for word in set(query_tokens)}
+    query_weights = {} # Ini adalah W_q (bobot query)
+    involved_docs = set() 
+
+    # === Langkah 1: Hitung bobot query & kumpulkan dokumen terlibat ===
+    for term, tf in query_tf.items():
+        if term in IDF_SCORES: 
+            idf = IDF_SCORES[term]
+            
+            if weighting_scheme == 'sublinear' and tf > 0:
+                W_q = (1 + math.log10(tf)) * idf
+            else: # Default ke 'tfidf' standar
+                W_q = tf * idf
+                
+            query_weights[term] = W_q
+            
+            # Kumpulkan semua dokumen yang mengandung term ini
+            current_node = VSM_INDEX_TF[term].head.nextval
+            while current_node is not None:
+                involved_docs.add(current_node.doc)
+                current_node = current_node.nextval
+    
+    if not involved_docs: 
+        return []
+
+    # === Langkah 2: Hitung skor dot product untuk dokumen terlibat ===
+    doc_scores = {doc_id: 0 for doc_id in involved_docs}
+    for term, W_q in query_weights.items():
+        current_node = VSM_INDEX_TF[term].head.nextval 
+        while current_node is not None:
+            doc_id = current_node.doc
+            if doc_id in doc_scores: 
+                
+                raw_tf_doc = current_node.freq
+                idf = IDF_SCORES[term]
+                
+                if weighting_scheme == 'sublinear' and raw_tf_doc > 0:
+                    W_d = (1 + math.log10(raw_tf_doc)) * idf
+                else: # Default ke 'tfidf' standar
+                    W_d = raw_tf_doc * idf
+                
+                # Sesuai Soal 04: Cosine Similarity (dot product)
+                doc_scores[doc_id] += W_d * W_q 
+            
+            current_node = current_node.nextval
+
+    ranked_results_by_doc = sorted(doc_scores.items(), key=lambda item: item[1], reverse=True)
+    return ranked_results_by_doc
+
+# ======================================================================
+# 5. FUNGSI PENCARIAN UTAMA (diperbarui dengan fallback kuat)
 # ======================================================================
 def search_by_keyword(query_tokens, special_intent, region_filter):
     """
     Melakukan pencarian VSM atau bypass jika intent 'ALL'.
-    Menggunakan ASET GLOBAL (IDF_SCORES, LINKED_LIST_DATA, DF_METADATA).
+    Menggunakan ASET GLOBAL (IDF_SCORES, VSM_INDEX_TF, DF_METADATA).
     """
-    if DF_METADATA is None or IDF_SCORES is None or LINKED_LIST_DATA is None:
+    if DF_METADATA is None or IDF_SCORES is None or VSM_INDEX_TF is None:
         print("!!! ERROR: Aset VSM tidak dimuat. Pencarian dibatalkan.")
         return []
 
@@ -105,31 +175,8 @@ def search_by_keyword(query_tokens, special_intent, region_filter):
         return final_recommendations
 
     # --- Jalur 2: Logika VSM (Jika bukan 'ALL') ---
-    if not query_tokens: return [] 
-
-    query_tf = {word: query_tokens.count(word) for word in set(query_tokens)}
-    query_weights = {}
-    involved_docs = set() 
-
-    for term, tf in query_tf.items():
-        if term in IDF_SCORES: 
-            query_weights[term] = tf * IDF_SCORES[term]
-            current_node = LINKED_LIST_DATA[term].head.nextval 
-            while current_node is not None:
-                involved_docs.add(current_node.doc)
-                current_node = current_node.nextval
-    if not involved_docs: return [] 
-
-    doc_scores = {doc_id: 0 for doc_id in involved_docs}
-    for term, W_q in query_weights.items():
-        current_node = LINKED_LIST_DATA[term].head.nextval 
-        while current_node is not None:
-            doc_id, W_d = current_node.doc, current_node.freq
-            if doc_id in doc_scores: 
-                doc_scores[doc_id] += W_d * W_q 
-            current_node = current_node.nextval
-
-    ranked_results_by_doc = sorted(doc_scores.items(), key=lambda item: item[1], reverse=True)
+    ranked_results_by_doc = _calculate_vsm_scores(query_tokens, 'tfidf')
+    if not ranked_results_by_doc: return []
 
     final_recommendations, unique_names = [], set()
     for doc_id, vsm_score in ranked_results_by_doc:

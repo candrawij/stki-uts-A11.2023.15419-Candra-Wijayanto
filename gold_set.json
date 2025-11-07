@@ -1,0 +1,43 @@
+{
+  "deskripsi": "Gold set (kunci jawaban) manual untuk evaluasi STKI. Doc_ID harus sesuai dengan 'Doc_ID' di corpus_master.csv",
+  "queries": [
+    {
+      "query_id": "q1",
+      "query_text": "camping alam sejuk",
+      "relevant_docs": [
+        15,
+        343,
+        189,
+        344,
+        96,
+        341,
+        325,
+        329,
+        59
+      ]
+    },
+    {
+      "query_id": "q2",
+      "query_text": "kamar mandi bersih dan murah",
+      "relevant_docs": [
+        82,
+        93,
+        95,
+        2,
+        110,
+        261,
+        187
+      ]
+    },
+    {
+      "query_id": "q3",
+      "query_text": "wisata di jogja",
+      "relevant_docs": [
+        343,
+        330,
+        325,
+        23
+      ]
+    }
+  ]
+}

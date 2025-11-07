@@ -1,9 +1,5 @@
 HASIL TESTING STKI TUGAS AKHIR 
 
-- pembuatan kamus dengan asisten jadi lebih praktis, tapi masih harus menginputkan kata lagi ke kamus secara manual (bershikan duplikasi dan join)
-- masih ada kesalahan di kunci yang diproses
-- pengelompokan wilayah seperti pantai, bukit, dll masih membingungkan sistem, mencari dari vsm atau teks mentah tidak begitu akurat
-
 1.0
 - pembuatan mesin pencarian
 - pembuatan korpus
@@ -78,9 +74,13 @@ HASIL TESTING STKI TUGAS AKHIR
 # waebsite masih terlalu putih, tidak ada fariasi warna
 # foto dari google tidak bisa dibaca, harus ganti foto
 
+2.2
+- penyesuaian dengan soal UTS
+- penambahan folder src
+- penambahan kode eval, boolean ir, dan ranking
+
 
 RENCANA
-- pembuatan website
 - perangkingan harga dan menampilkan harga
 - tanggal terakhir review
 - frekuensi dari baik, cukup, buruk
@@ -93,3 +93,7 @@ RENCANA
 NOTE
 - waduk sermo banyak tempat kemahnya, jadi bisa dispesifikkan lagi agar tahu ada tempat kemah apa aja
 - di karimun juga sama ada Lokasi-Lokasi Camping Favorit di Karimunjawa, bisa diperinci lagi
+
+- file asisten kamus masuk di folder lama, pembuatan kamus dengan asisten jadi lebih praktis, tapi masih harus menginputkan kata lagi ke kamus secara manual (bershikan duplikasi dan join)
+- nilai relevansi masih kurang dari kata sempurna
+- pengelompokan wilayah seperti pantai, bukit, dll masih membingungkan sistem, mencari dari vsm atau teks mentah tidak begitu akurat

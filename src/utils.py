@@ -2,10 +2,13 @@ import pandas as pd
 import os
 import joblib
 import streamlit as st
-from vsm_structures import Node, SlinkedList
+from .vsm_structures import Node, SlinkedList
 from datetime import datetime
 
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+# Dapatkan path ke folder 'src' saat ini
+SRC_DIR = os.path.dirname(os.path.abspath(__file__))
+# Dapatkan path ke folder ROOT (satu level di atas 'src')
+BASE_DIR = os.path.dirname(SRC_DIR)
 
 def load_map_from_csv(filename):
     """
@@ -53,11 +56,11 @@ def load_assets():
     try:
         # Memuat tiga aset utama
         IDF_SCORES = joblib.load(os.path.join(assets_dir, 'idf_scores.pkl'))
-        LINKED_LIST_DATA = joblib.load(os.path.join(assets_dir, 'linked_list_data.pkl'))
+        VSM_INDEX_TF = joblib.load(os.path.join(assets_dir, 'vsm_index_tf.pkl'))
         DF_METADATA = joblib.load(os.path.join(assets_dir, 'df_metadata.pkl'))
         
         print("✅ Aset VSM berhasil dimuat.")
-        return IDF_SCORES, LINKED_LIST_DATA, DF_METADATA
+        return IDF_SCORES, VSM_INDEX_TF, DF_METADATA
     
     except FileNotFoundError:
         print(f"❌ ERROR: File aset .pkl tidak ditemukan di '{assets_dir}'.")

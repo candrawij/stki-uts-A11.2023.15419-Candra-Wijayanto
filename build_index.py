@@ -2,12 +2,11 @@ import pandas as pd
 import math
 import joblib
 import os
-import json 
+import json
 
 try:
-    from preprocessing import full_preprocessing
-    # Impor Class dari file barunya
-    from vsm_structures import SlinkedList, Node
+    from src.preprocessing import full_preprocessing
+    from src.vsm_structures import SlinkedList, Node
 except ImportError as e:
     print(f"❌ FATAL ERROR: Gagal mengimpor modul. Pastikan semua file .py ada: {e}")
     exit()
@@ -48,13 +47,31 @@ for term, count in df_counts.items():
 print("✅ Selesai preprocessing dan perhitungan DF/IDF.")
 
 # --- 4. BUILDING THE INVERTED INDEX WITH TF-IDF (INDEXING PHASE 2) ---
-print("🔄 Membangun inverted index dengan TF-IDF...")
-linked_list_data = {}
+print("🔄 Membangun Boolean inverted index...")
+boolean_inverted_index = {} # dict(term -> set(doc_ids))
 unique_words_all = set(df_counts.keys())
 
+# Inisialisasi semua term dengan set kosong
 for word in unique_words_all:
-    linked_list_data[word] = SlinkedList()
-    linked_list_data[word].head = Node(docId=0, freq=None) 
+    boolean_inverted_index[word] = set()
+
+# Isi set dengan Doc_ID yang relevan
+for index, row in df_corpus.iterrows():
+    doc_id = row['Doc_ID']
+    tokens = row['Clean_Tokens']
+    
+    for term in set(tokens): # Hanya term unik per dokumen
+        if term in boolean_inverted_index:
+            boolean_inverted_index[term].add(doc_id)
+print("✅ Selesai membangun Boolean inverted index.")
+
+# --- 5. BUILDING THE VSM INVERTED INDEX WITH LINKED LIST (INDEXING PHASE 3) ---
+print("🔄 Membangun VSM inverted index (Linked List) dengan RAW TF...")
+vsm_index_tf = {} 
+
+for word in unique_words_all:
+    vsm_index_tf[word] = SlinkedList()
+    vsm_index_tf[word].head = Node(docId=0, freq=None) 
 
 for index, row in df_corpus.iterrows():
     doc_id = row['Doc_ID']
@@ -64,15 +81,15 @@ for index, row in df_corpus.iterrows():
 
     for term, tf in tf_in_doc.items():
         if term in idf_scores: # Pastikan term ada di IDF
-            tfidf = tf * idf_scores[term]
             
             # Cari ujung linked list untuk term ini
-            current_node = linked_list_data[term].head
+            current_node = vsm_index_tf[term].head
             while current_node.nextval is not None:
                 current_node = current_node.nextval
             
             # Tambahkan node baru di ujung
-            current_node.nextval = Node(docId=doc_id, freq=tfidf)
+            current_node.nextval = Node(docId=doc_id, freq=tf)
+print("✅ Selesai membangun VSM inverted index (Raw TF).")
 
 # Mapping Doc ID to Name and Rating for final result
 df_metadata = df_corpus[['Doc_ID', 'Nama_Tempat', 'Lokasi', 'Rating']].copy()
@@ -137,8 +154,10 @@ os.makedirs(OUTPUT_DIR, exist_ok=True)
 try:
     print("🔄 Menyimpan file aset (.pkl)...")
     joblib.dump(idf_scores, os.path.join(OUTPUT_DIR, 'idf_scores.pkl'))
-    joblib.dump(linked_list_data, os.path.join(OUTPUT_DIR, 'linked_list_data.pkl'))
+    joblib.dump(vsm_index_tf, os.path.join(OUTPUT_DIR, 'vsm_index_tf.pkl'))
     joblib.dump(df_metadata, os.path.join(OUTPUT_DIR, 'df_metadata.pkl'))
+
+    joblib.dump(boolean_inverted_index, os.path.join(OUTPUT_DIR, 'boolean_index.pkl'))
 
     print(f"✅ SUKSES: Semua file aset (.pkl) telah dibuat dan disimpan di folder '{OUTPUT_DIR}'.")
 

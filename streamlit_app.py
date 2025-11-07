@@ -1,10 +1,10 @@
 import streamlit as st
-import mesin_pencari
 import pandas as pd
 import urllib.parse
 import json
 import os
 import re
+from src import mesin_pencari
 
 # --- FUNGSI LOGGING (NONAKTIF SEMENTARA) ---
 # ... (tetap nonaktif) ...
