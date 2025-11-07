@@ -1,8 +1,0 @@
-timestamp,query_mentah,vsm_tokens_final,intent_terdeteksi,region_terdeteksi
-2025-10-30 10:50:45,tempat kemah sejuk,tempatkemah sejuk,None,None
-2025-10-30 10:56:59,tempat kemah di jogja,tempatkemah,None,diy
-2025-11-01 08:12:07,tempat kemah di jogja yang sejuk,tempatkemah sejuk,None,diy
-2025-11-01 08:12:16,tempat kemah di jogja yang asri,tempatkemah asri,None,diy
-2025-11-01 08:12:21,tempat kemah di jogja,tempatkemah,None,diy
-2025-11-01 08:18:53,tempat kemah di jogja,tempatkemah,None,diy
-2025-11-01 08:20:45,tempat kemah di kendal,tempatkemah,None,kendal
