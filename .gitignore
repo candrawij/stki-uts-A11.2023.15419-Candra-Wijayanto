@@ -13,7 +13,7 @@ __pycache__/
 # 3. Aset Buatan Proyek (SANGAT DIREKOMENDASIKAN)
 # Mengabaikan semua file .pkl di dalam folder Assets.
 # Dosen/pengguna lain harus menjalankan 'build_index.py' untuk membuatnya.
-Assets/*.pkl
+# Assets/*.pkl
 
 # 4. Log Proyek (SANGAT DIREKOMENDASIKAN)
 # Mengabaikan folder log riwayat pencarian

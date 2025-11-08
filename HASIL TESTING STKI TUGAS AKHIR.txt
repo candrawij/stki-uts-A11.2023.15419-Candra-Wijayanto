@@ -80,6 +80,9 @@ HASIL TESTING STKI TUGAS AKHIR
 - penambahan folder src
 - penambahan kode eval, boolean ir, dan ranking
 
+2.2.1
+- 
+
 
 RENCANA
 - perangkingan harga dan menampilkan harga
