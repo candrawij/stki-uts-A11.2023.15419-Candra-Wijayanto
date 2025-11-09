@@ -19,7 +19,7 @@ HASIL TESTING STKI TUGAS AKHIR
 - korpus berada di folder terpisah
 - penambahan folder baru bernama kamus yang berisi pemetaan frasa, region dan special intent
 - perbaikan di fitur intent ALL, sudah bisa menampilkan semua tempat kemah yang sesuai
-- penambahan fitur negasi
+- penambahan fitur negasi **
 - perbaikan rating top dan bottom
 - penambahan data pada korpus
 
@@ -30,7 +30,7 @@ HASIL TESTING STKI TUGAS AKHIR
 - pencarian kata pada asisten sudah termasuk menghapus kata yang sudah dimasukan ke kamus, sehingga lebih efisien untuk input data
 
 1.5
-- periwayatan pencarian
+- periwayatan pencarian **
 - perbaikan frasa yang beresiko menimbulkan kesalahan
 - efisiensi dan integrasi data
 - periwayatan penambahan data dan proses pada mesin pencarian
@@ -81,23 +81,30 @@ HASIL TESTING STKI TUGAS AKHIR
 - penambahan kode eval, boolean ir, dan ranking
 
 2.2.1
-- 
+- perbaikan gitignore untuk akses streamlit
+
+2.3
+- penambahan asisten konfersi data input ke info tempat
+- penyesuaian kode dengan info tempat
+- penambahan kategori pada harga di info tempat
+- penambahan kolom waktu buka di info tempat
+- perbaikan css
 
 
 RENCANA
-- perangkingan harga dan menampilkan harga
+- perangkingan harga, pencarian berdasarkan harga mahal dan murah
 - tanggal terakhir review, tanggal terakhir update korpus
 - query frekuensi dari baik, cukup, buruk
 - penggunaan atau, dan (multiple choice)
 - pencarian terbalik, jika cari tempat kemah, maka muncul query atau index apa saja di tempat itu
 - tampilan diperbaiki untuk mobile
 - smart, bisa mengenali topik dari review, contoh tahu harga tiket, dll
-- informasi jam kerja (pengalaman di sermo, belum masuk jam kerja suruh nunggu dlu)
+- pembacaan teks mentah yang lebih pintar
 
 NOTE
 - waduk sermo banyak tempat kemahnya, jadi bisa dispesifikkan lagi agar tahu ada tempat kemah apa aja
 - di karimun juga sama ada Lokasi-Lokasi Camping Favorit di Karimunjawa, bisa diperinci lagi
 
-- file asisten kamus masuk di folder lama, pembuatan kamus dengan asisten jadi lebih praktis, tapi masih harus menginputkan kata lagi ke kamus secara manual (bershikan duplikasi dan join)
+- file asisten kamus masuk di folder lama, pembuatan kamus dengan asisten jadi lebih praktis, tapi masih harus menginputkan kata lagi ke kamus secara manual (bersihkan duplikasi dan join)
 - nilai relevansi masih kurang dari kata sempurna
 - pengelompokan wilayah seperti pantai, bukit, dll masih membingungkan sistem, mencari dari vsm atau teks mentah tidak begitu akurat

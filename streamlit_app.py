@@ -77,7 +77,7 @@ if 'selected_item' not in st.session_state: # <-- State untuk st.dialog
     st.session_state.selected_item = None
 
 st.title("🏕️ Cari Kemah")
-st.markdown('<p class="sub-judul">Temukan tempat kemah ideal di Jawa Tengah & DIY"</p>', unsafe_allow_html=True)
+st.markdown('<p class="sub-judul">Temukan tempat kemah ideal di Jawa Tengah & DIY</p>', unsafe_allow_html=True)
 st.markdown('<p class="search-guide">Ketik misal: \'kamar mandi bersih\', \'sejuk di jogja\', \'terbaik di kendal\'</p>', unsafe_allow_html=True)
 st.write("") # Spasi
 
@@ -189,69 +189,124 @@ if st.session_state.search_performed:
             # Ambil item yang dipilih dari state
             item = st.session_state.selected_item
             
-            # 1. Buat instance dialog
+            # Tampilkan dialog dengan detail item
             @st.dialog(title=f"🏕️ {item.get('name', 'Detail')}")
             def tampilkan_detail_dialog():
 
-                # 2. Tambahkan elemen ke instance 'dialog.'
+                # Menampilkan Waktu Buka & Info Lokasi
                 st.markdown(f"**📍 Lokasi:** {item.get('location', 'N/A')}")
+                st.markdown(f"**🕒 Info Reservasi:** {item.get('waktu_buka', 'Info tidak tersedia')}")
+                
                 st.divider()
 
-                # --- Logika Harga ---
                 st.markdown(f"**Estimasi Harga**")
                 price_items_list = item.get('price_items', [])
-                total_harga_dasar = 0
-                harga_items_ditemukan = False
+                
+                # Siapkan list untuk 4 kategori baru Anda
+                item_wajib = []
+                item_pokok = []
+                item_mewah = []
+                item_layanan = []
 
                 if not price_items_list:
                     st.write("- Info harga tidak tersedia.")
                 else:
+                    # --- TAHAP 1: Kelompokkan Semua Item ---
                     for price_item in price_items_list:
                         try:
-                            item_name = str(price_item.get('item', 'Item tidak diketahui'))
-                            harga_int = int(price_item.get('harga', 0))
-                            harga_items_ditemukan = True
+                            kategori = price_item.get('kategori', 'sewa mewah')
+                            
+                            # Tambahkan 'harga' sebagai int untuk menghindari error nanti
+                            price_item['harga'] = int(price_item.get('harga', 0)) 
+                            
+                            if kategori == 'biaya wajib':
+                                item_wajib.append(price_item)
+                            elif kategori == 'sewa pokok':
+                                item_pokok.append(price_item)
+                            elif kategori == 'sewa mewah':
+                                item_mewah.append(price_item)
+                            elif kategori == 'layanan':
+                                item_layanan.append(price_item)
                         except (ValueError, TypeError, AttributeError):
                             continue 
-                        
-                        st.write(f"- {item_name}: **Rp {harga_int:,}**")
-                        
-                        item_name_lower = item_name.lower()
-                        if 'sewa' not in item_name_lower and 'perlengkapan' not in item_name_lower:
-                            total_harga_dasar += harga_int
-                    
-                    if harga_items_ditemukan:
-                        st.write("---")
-                        st.markdown(f"**Estimasi Total (Dasar): Rp {total_harga_dasar:,}**")
-                    elif price_items_list:
-                            st.write("Format data harga tidak valid.")
 
-                st.write("")
+                    # --- TAHAP 2: Hitung Estimasi Dasar (Logika MIN + Pelacakan Nama) ---
+                    total_estimasi_dasar = 0
+                    # (BARU) List untuk menyimpan nama item yang dihitung
+                    estimasi_items_names = []
+                    
+                    # 2a. Cari item TIKET termurah
+                    item_tiket_list = [p for p in item_wajib if 'tiket' in p.get('item', '').lower()]
+                    item_tiket_terbaik = min(item_tiket_list, key=lambda x: x['harga']) if item_tiket_list else None
+                    
+                    if item_tiket_terbaik:
+                        total_estimasi_dasar += item_tiket_terbaik['harga']
+                        estimasi_items_names.append(item_tiket_terbaik['item']) # Simpan nama
+
+                    # 2b. Cari item PARKIR termurah
+                    item_parkir_list = [p for p in item_wajib if 'parkir' in p.get('item', '').lower()]
+                    item_parkir_terbaik = min(item_parkir_list, key=lambda x: x['harga']) if item_parkir_list else None
+
+                    if item_parkir_terbaik:
+                        total_estimasi_dasar += item_parkir_terbaik['harga']
+                        estimasi_items_names.append(item_parkir_terbaik['item']) # Simpan nama
+
+                    # 2c. Tambahkan biaya wajib LAINNYA (yang bukan tiket/parkir)
+                    item_admin_lain = [p for p in item_wajib if 'tiket' not in p.get('item', '').lower() and 'parkir' not in p.get('item', '').lower()]
+                    
+                    for admin_item in item_admin_lain: 
+                        total_estimasi_dasar += admin_item['harga']
+                        estimasi_items_names.append(admin_item['item'])
+
+
+                    # --- TAHAP 3: Tampilkan Semua Kategori ---
+                    
+                    if item_wajib:
+                        st.markdown("**Biaya Wajib (Tiket, Parkir, dll)**")
+                        for p in item_wajib: st.write(f"- {p.get('item')}: **Rp {p.get('harga', 0):,}**")
+
+                    if item_pokok:
+                        st.markdown("**Sewa Alat Pokok (Tenda, Matras, dll)**")
+                        for p in item_pokok: st.write(f"- {p.get('item')}: **Rp {p.get('harga', 0):,}**")
+
+                    if item_mewah:
+                        st.markdown("**Sewa Alat Tambahan (Mewah)**")
+                        for p in item_mewah: st.write(f"- {p.get('item')}: **Rp {p.get('harga', 0):,}**")
+                    
+                    if item_layanan:
+                        st.markdown("**Layanan & Jasa (Katering, dll)**")
+                        for p in item_layanan: st.write(f"- {p.get('item')}: **Rp {p.get('harga', 0):,}**")
+
+                    # --- PERBAIKAN: Tampilkan Estimasi Dasar + Rinciannya ---
+                    if total_estimasi_dasar > 0:
+                        st.write("---")
+                        st.markdown(f"**Estimasi Biaya Dasar (Wajib): Rp {total_estimasi_dasar:,}**")
+                        
+                        # Buat teks rincian
+                        rincian_teks = " + ".join(estimasi_items_names)
+                        st.caption(f"Estimasi dasar dihitung dari: {rincian_teks}")
+                    
+                st.write("") # Spasi
                 
-                # --- Logika Fasilitas ---
                 st.markdown(f"**Fasilitas**")
-                facilities_str = item.get('facilities', "")
+                facilities_str = item.get('facilities', "") 
                 
                 if not facilities_str:
                     st.write("- Info fasilitas tidak tersedia.")
                 else:
-                    # 2. GUNAKAN 're.split' UNTUK SPLIT YANG LEBIH KUAT
-                    #    Memisahkan berdasarkan | , atau newline
-                    facilities_list = [f.strip() for f in re.split(r'[|,]', facilities_str) if f.strip()]
+                    facilities_list = [f.strip() for f in re.split(r'[|,\n]', facilities_str) if f.strip()]
                     
                     if not facilities_list:
                         st.write("- Info fasilitas tidak tersedia.")
                     else:
                         for fac in facilities_list:
-                            st.write(f"- {fac}") # Tampilkan satu per satu
+                            st.write(f"- {fac}")
 
-                st.write("")
+                st.write("") # Spasi
                 st.link_button("Buka di Google Maps ↗", item.get('gmaps_link', '#'), use_container_width=True)
                 
-                # Tombol "Tutup" di dalam dialog
                 if st.button("Tutup", use_container_width=True, key="dialog_close"):
                     st.session_state.selected_item = None
-                    st.rerun() # Wajib untuk menutup dialog via tombol
-            
+                    st.rerun()
 
             tampilkan_detail_dialog()

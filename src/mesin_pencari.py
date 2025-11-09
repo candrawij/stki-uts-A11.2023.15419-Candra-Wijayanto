@@ -153,10 +153,9 @@ def search_by_keyword(query_tokens, special_intent, region_filter):
             if not gmaps_link or pd.isna(gmaps_link):
                 gmaps_link = f"https://www.google.com/maps/search/?api=1&query={urllib.parse.quote(str(row['Nama_Tempat']) + ' ' + str(row['Lokasi']))}"
 
-            # --- PERBAIKAN ValueError: Ganti pd.isna(list) ---
             facilities = row.get('Facilities')
-            if not isinstance(facilities, list): # Cek jika bukan list (misal: nan, None)
-                facilities = [] 
+            if pd.isna(facilities) or not isinstance(facilities, str):
+                facilities = "" # Fallback ke string kosong 
 
             price_items = row.get('Price_Items')
             if not isinstance(price_items, list): # Cek jika bukan list
@@ -170,7 +169,8 @@ def search_by_keyword(query_tokens, special_intent, region_filter):
                 'photo_url': photo_url,
                 'gmaps_link': gmaps_link,
                 'price_items': price_items, 
-                'facilities': facilities 
+                'facilities': facilities,
+                'waktu_buka': row.get('Waktu_Buka', 'Info tidak tersedia')
             })
         return final_recommendations
 
@@ -213,8 +213,9 @@ def search_by_keyword(query_tokens, special_intent, region_filter):
                 'top_vsm_score': vsm_score,
                 'photo_url': photo_url,
                 'gmaps_link': gmaps_link,
-                'price_items': price_items, # Ini adalah LIST
-                'facilities': facilities    # Ini adalah STRING
+                'price_items': price_items, 
+                'facilities': facilities,
+                'waktu_buka': meta.get('Waktu_Buka', 'Info tidak tersedia')
             })
 
     if special_intent == 'RATING_TOP':

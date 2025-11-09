@@ -129,19 +129,21 @@ try:
     print("✅ Berhasil menggabungkan data statis (foto, harga, dll).")
 
     # 4. FINAL FALLBACK -> BENAR
+    df_metadata['Price_Items'] = df_metadata['Price_Items'].apply(lambda x: [] if isinstance(x, float) and pd.isna(x) else x)
+    df_metadata['Facilities'] = df_metadata['Facilities'].fillna("")
+    df_metadata['Waktu_Buka'] = df_metadata['Waktu_Buka'].fillna("Info tidak tersedia")
     df_metadata['Photo_URL'] = df_metadata['Photo_URL'].fillna("")
     df_metadata['Gmaps_Link'] = df_metadata['Gmaps_Link'].fillna("")
-    df_metadata['Facilities'] = df_metadata['Facilities'].fillna("")
-    df_metadata['Price_Items'] = df_metadata['Price_Items'].apply(lambda x: [] if isinstance(x, float) and pd.isna(x) else x)
-
+    
 except FileNotFoundError:
     print(f"⚠️ PERINGATAN: {INFO_STATIS_PATH} tidak ditemukan.")
     print("   Melanjutkan tanpa data foto/harga/fasilitas.")
     # Buat kolom placeholder KONSISTEN
-    df_metadata['Photo_URL'] = ""
-    df_metadata['Gmaps_Link'] = ""
     df_metadata['Price_Items'] = [[] for _ in range(len(df_metadata))] # Tipe List
     df_metadata['Facilities'] = "" # Tipe String
+    df_metadata['Waktu_Buka'] = "Info tidak tersedia"
+    df_metadata['Photo_URL'] = ""
+    df_metadata['Gmaps_Link'] = ""
 
 # Jadikan Doc_ID sebagai index
 df_metadata.set_index('Doc_ID', inplace=True)
